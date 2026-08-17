@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-teal"> <!-- Default theme -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local Fund Management - स्थानीय वित्तीय प्रबंधन</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Subtle background pattern */
+      body {
+        background-color: #f8fafc; /* bg-slate-50 */
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e2e8f0' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      }
+      /* Theme Definitions */
+      .theme-teal {
+        --color-primary-50: 240 253 250;
+        --color-primary-100: 204 251 241;
+        --color-primary-200: 153 246 228;
+        --color-primary-300: 94 234 212;
+        --color-primary-400: 45 212 191;
+        --color-primary-500: 20 184 166;
+        --color-primary-600: 13 148 136;
+        --color-primary-700: 15 118 110;
+        --color-primary-800: 17 94 89;
+        --color-primary-900: 19 78 74;
+        --color-primary-950: 4 47 46;
+      }
+      .theme-indigo {
+        --color-primary-50: 238 242 255;
+        --color-primary-100: 224 231 255;
+        --color-primary-200: 199 210 254;
+        --color-primary-300: 165 180 252;
+        --color-primary-400: 129 140 248;
+        --color-primary-500: 99 102 241;
+        --color-primary-600: 79 70 229;
+        --color-primary-700: 67 56 202;
+        --color-primary-800: 55 48 163;
+        --color-primary-900: 49 46 129;
+        --color-primary-950: 30 27 75;
+      }
+      .theme-emerald {
+        --color-primary-50: 236 253 245;
+        --color-primary-100: 209 250 229;
+        --color-primary-200: 167 243 208;
+        --color-primary-300: 110 231 183;
+        --color-primary-400: 52 211 153;
+        --color-primary-500: 16 185 129;
+        --color-primary-600: 5 150 105;
+        --color-primary-700: 4 120 87;
+        --color-primary-800: 6 95 70;
+        --color-primary-900: 6 78 59;
+        --color-primary-950: 2 44 34;
+      }
+      /* Custom print styles for printing cards, receipts & reports */
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+        }
+
+        *, *:before, *:after {
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+
+        html, body, #root, main, div#root > div {
+          background: #ffffff !important;
+          color: #000000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          height: auto !important;
+          min-height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Hide layout chrome, sidebar, header, footers, navigation, buttons, controls */
+        header, footer, nav, aside, button, input, select, textarea, .print\:hidden {
+          display: none !important;
+          visibility: hidden !important;
+        }
+
+        /* Override dark modal overlays during print so they don't produce a dark background */
+        div[class*="fixed"], div[class*="absolute"], div[class*="backdrop"], div[class*="bg-slate-900"], div[class*="bg-black"], div[class*="overflow-y-auto"] {
+          position: static !important;
+          overflow: visible !important;
+          height: auto !important;
+          max-height: none !important;
+          width: 100% !important;
+          max-width: none !important;
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border: none !important;
+        }
+
+        /* Printable containers rendering rules */
+        #printable-area, #receipt-print-area, .printable-area {
+          display: block !important;
+          visibility: visible !important;
+          position: relative !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 auto !important;
+          padding: 10px !important;
+          border: 1px solid #000000 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+
+        /* Force table text and borders to print sharply */
+        table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          font-size: 11px !important;
+        }
+
+        th, td {
+          border: 1px solid #000000 !important;
+          padding: 5px 8px !important;
+          color: #000000 !important;
+        }
+
+        thead {
+          background-color: #f1f5f9 !important;
+          display: table-header-group !important;
+        }
+
+        tr {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+
+        .page-break-inside-avoid {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+
+        .page-break-after-always {
+          page-break-after: always !important;
+          break-after: always !important;
+        }
+      }
+    </style>
+    <script>
+      const withOpacity = (variableName) => ({ opacityValue }) => {
+        if (opacityValue !== undefined) {
+          return `rgba(var(${variableName}), ${opacityValue})`;
+        }
+        return `rgb(var(${variableName}))`;
+      }
+
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#0d9488',
+                '50': '#f0fdfa',
+                '100': '#ccfbf1',
+                '200': '#99f6e4',
+                '300': '#5eead4',
+                '400': '#2dd4bf',
+                '500': '#14b8a6',
+                '600': '#0d9488',
+                '700': '#0f766e',
+                '800': '#115e59',
+                '900': '#134e4a',
+                '950': '#042f2e',
+              },
+            },
+            fontFamily: {
+              sans: ['"Noto Sans Devanagari"', 'Inter', '"Segoe UI"', 'Mangal', '"Nirmala UI"', 'system-ui', 'sans-serif'],
+              devanagari: ['"Noto Sans Devanagari"', '"Tiro Devanagari Hindi"', 'Mangal', '"Nirmala UI"', 'sans-serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+              'slide-up': 'slideUp 0.5s ease-in-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              },
+              slideUp: {
+                '0%': { opacity: 0, transform: 'translateY(20px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              }
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yantramanav:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/heroicons/2.0.16/24/outline/heroicons.min.css" rel="stylesheet">
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-50 font-sans antialiased">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

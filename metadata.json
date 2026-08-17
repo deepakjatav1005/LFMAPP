@@ -1,0 +1,8 @@
+{
+  "name": "Local Fund Management",
+  "description": "स्थानीय वित्तीय प्रबंधन - संस्था के वित्तीय एवं टैक्स आय व्यय प्रबंधन पोर्टल with tax collection, dues, vouchers, cashbook, and local revenue management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
