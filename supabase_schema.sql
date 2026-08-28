@@ -472,39 +472,182 @@ ALTER TABLE public.building_permissions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read building_permissions" ON public.building_permissions FOR SELECT USING (true);
 CREATE POLICY "Allow public write building_permissions" ON public.building_permissions FOR ALL USING (true);
 
+-- 15. OTHER TAX RECEIPTS (3.11 अन्य कर रसीद प्रबंधन तालिका)
+CREATE TABLE IF NOT EXISTS public.other_tax_receipts (
+    id TEXT PRIMARY KEY,
+    receipt_no TEXT UNIQUE NOT NULL,
+    family_id TEXT,
+    beneficiary_name TEXT NOT NULL,
+    guardian_name TEXT,
+    mobile TEXT,
+    ward_no TEXT,
+    muhalla TEXT,
+    samagra_id TEXT,
+    family_samagra_id TEXT,
+    category TEXT DEFAULT 'APL',
+    tax_head TEXT NOT NULL,
+    tax_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    receipt_date DATE DEFAULT CURRENT_DATE,
+    payment_mode TEXT NOT NULL DEFAULT 'CASH',
+    transaction_id TEXT,
+    collector_name TEXT,
+    remarks TEXT,
+    cashbook_voucher_id TEXT,
+    gram_panchayat TEXT,
+    admin_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_other_tax_receipt_no ON public.other_tax_receipts(receipt_no);
+CREATE INDEX IF NOT EXISTS idx_other_tax_family ON public.other_tax_receipts(family_id);
+CREATE INDEX IF NOT EXISTS idx_other_tax_panchayat ON public.other_tax_receipts(gram_panchayat);
+
+ALTER TABLE public.other_tax_receipts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read other_tax_receipts" ON public.other_tax_receipts;
+DROP POLICY IF EXISTS "Allow public write other_tax_receipts" ON public.other_tax_receipts;
+CREATE POLICY "Allow public read other_tax_receipts" ON public.other_tax_receipts FOR SELECT USING (true);
+CREATE POLICY "Allow public write other_tax_receipts" ON public.other_tax_receipts FOR ALL USING (true);
+
+-- ==============================================================================
+-- 8. BUSINESS / SHOP REGISTRATIONS TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.business_registrations (
+    id TEXT PRIMARY KEY,
+    certificate_no TEXT,
+    voucher_no TEXT,
+    family_id TEXT,
+    member_id TEXT,
+    owner_name TEXT NOT NULL,
+    beneficiary_name TEXT,
+    guardian_name TEXT,
+    mobile TEXT,
+    ward_no TEXT DEFAULT '01',
+    muhalla TEXT,
+    samagra_family_id TEXT,
+    samagra_member_id TEXT,
+    category TEXT DEFAULT 'General',
+    business_name TEXT NOT NULL,
+    shop_name TEXT,
+    business_type TEXT NOT NULL,
+    shop_address TEXT NOT NULL,
+    address TEXT,
+    shop_area_sq_ft NUMERIC(10,2) DEFAULT 0,
+    area_sq_ft NUMERIC(10,2) DEFAULT 0,
+    shop_total_cost NUMERIC(12,2),
+    annual_tax_rate NUMERIC(10,2),
+    gst_number TEXT,
+    photo_url TEXT,
+    registration_date DATE DEFAULT CURRENT_DATE,
+    valid_upto DATE,
+    status TEXT DEFAULT 'ACTIVE',
+    remarks TEXT,
+    gram_panchayat TEXT,
+    admin_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_biz_reg_gram_panchayat ON public.business_registrations(gram_panchayat);
+CREATE INDEX IF NOT EXISTS idx_biz_reg_certificate ON public.business_registrations(certificate_no);
+CREATE INDEX IF NOT EXISTS idx_biz_reg_family ON public.business_registrations(family_id);
+
+ALTER TABLE public.business_registrations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read business_registrations" ON public.business_registrations;
+DROP POLICY IF EXISTS "Allow public write business_registrations" ON public.business_registrations;
+CREATE POLICY "Allow public read business_registrations" ON public.business_registrations FOR SELECT USING (true);
+CREATE POLICY "Allow public write business_registrations" ON public.business_registrations FOR ALL USING (true);
+
 -- ==============================================================================
 -- 9. SUPABASE STORAGE BUCKET CREATION & POLICIES
--- Recommended Bucket Name: `panchayat-assets`
--- Used for: Office Logo, QR Code Images, Demand Notices, and Payment Receipts
+-- Recommended Bucket Names: `photos` and `panchayat-assets`
+-- Used for: Business Photos, Office Logo, QR Code Images, Developer Logo, Avatars, Demand Notices, and Payment Receipts
 -- ==============================================================================
 
--- Create Storage Bucket
+-- Create Storage Buckets ('photos' and 'panchayat-assets')
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
+VALUES 
+(
+    'photos', 
+    'photos', 
+    true, 
+    10485760, -- 10 MB limit
+    ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf']
+),
+(
     'panchayat-assets', 
     'panchayat-assets', 
     true, 
-    5242880, -- 5 MB limit
-    ARRAY['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
+    10485760, -- 10 MB limit
+    ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf']
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Storage Public Read Policy
+-- Storage Public Policies for Read, Upload, Update, and Delete
+DROP POLICY IF EXISTS "Public Read Access for Photos Bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload Access for Photos Bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Manage Access for Photos Bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Public Read Access for Panchayat Assets" ON storage.objects;
 DROP POLICY IF EXISTS "Public Upload Access for Panchayat Assets" ON storage.objects;
 DROP POLICY IF EXISTS "Public Manage Access for Panchayat Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public Access to all photos and assets" ON storage.objects;
 
-CREATE POLICY "Public Read Access for Panchayat Assets" 
+CREATE POLICY "Public Read Access for Photos Bucket" 
 ON storage.objects FOR SELECT 
-USING (bucket_id = 'panchayat-assets');
+USING (bucket_id IN ('photos', 'panchayat-assets', 'assets', 'public'));
 
--- Storage Public Upload Policy
-CREATE POLICY "Public Upload Access for Panchayat Assets" 
+CREATE POLICY "Public Upload Access for Photos Bucket" 
 ON storage.objects FOR INSERT 
-WITH CHECK (bucket_id = 'panchayat-assets');
+WITH CHECK (bucket_id IN ('photos', 'panchayat-assets', 'assets', 'public'));
 
--- Storage Public Update/Delete Policy
-CREATE POLICY "Public Manage Access for Panchayat Assets" 
+CREATE POLICY "Public Manage Access for Photos Bucket" 
 ON storage.objects FOR ALL 
-USING (bucket_id = 'panchayat-assets');
+USING (bucket_id IN ('photos', 'panchayat-assets', 'assets', 'public'));
+
+-- ==============================================================================
+-- 10. DEVELOPER PROFILE & OWNER BRANDING TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.developer_profile (
+    id TEXT PRIMARY KEY DEFAULT 'master_developer',
+    name TEXT NOT NULL,
+    company TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    version TEXT DEFAULT 'v3.0 Multi-Tenant Pro',
+    support_hours TEXT,
+    address TEXT,
+    logo_url TEXT,
+    avatar_url TEXT,
+    qr_code_url TEXT,
+    upi_id TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ensure all columns exist on developer_profile
+ALTER TABLE public.developer_profile ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE public.developer_profile ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.developer_profile ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
+ALTER TABLE public.developer_profile ADD COLUMN IF NOT EXISTS upi_id TEXT;
+ALTER TABLE public.developer_profile ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.developer_profile ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read developer_profile" ON public.developer_profile;
+DROP POLICY IF EXISTS "Allow public write developer_profile" ON public.developer_profile;
+CREATE POLICY "Allow public read developer_profile" ON public.developer_profile FOR SELECT USING (true);
+CREATE POLICY "Allow public write developer_profile" ON public.developer_profile FOR ALL USING (true);
+
+-- Seed default master developer profile record if none exists
+INSERT INTO public.developer_profile (id, name, company, email, phone, version, support_hours, address)
+VALUES (
+    'master_developer',
+    'Hemlata Jatav',
+    'Chanchal Net Zone',
+    'chanchalnetzone2026@gmail.com',
+    '911234567890',
+    'v3.0 Multi-Tenant Pro',
+    '09:00 AM - 08:00 PM IST',
+    'Main Market Road, Sehore / Guna, Madhya Pradesh - 466001'
+)
+ON CONFLICT (id) DO UPDATE SET 
+    updated_at = timezone('utc'::text, now());
+
+
 

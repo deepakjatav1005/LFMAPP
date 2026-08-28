@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tax, Payment, Family, Admin, TaxType, OfficeDetails } from '../types';
 import { exportToPDF, exportToExcel, exportBulkVouchersToPDF } from '../utils/exportUtils';
 import ViewHeader from './ViewHeader';
-import { triggerPrint, getCleanOfficeTitle, formatDateDDMMYYYY } from '../utils/printUtils';
+import { triggerPrint, getCleanOfficeTitle, getCleanOfficeSubtitle, formatDateDDMMYYYY } from '../utils/printUtils';
 
 interface TaxReportViewProps {
   taxes: Tax[];
@@ -216,7 +216,8 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
       `Tax Type: ${tpTaxType === 'ALL' ? 'All Combined Taxes' : tpTaxType} | Total Payers: ${taxpayersList.length}`,
       headers,
       rows,
-      admin?.gramPanchayat
+      officeDetails,
+      admin
     );
   };
 
@@ -329,7 +330,8 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
       `Month-wise Charged, Received & Pending Amounts`,
       headers,
       rows,
-      admin?.gramPanchayat
+      officeDetails,
+      admin
     );
   };
 
@@ -351,10 +353,9 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
     const monthObj = months.find((m) => m.value === selectedMonth);
     const monthName = monthObj?.name || `Month_${selectedMonth}`;
     const filename = `Tax_Vouchers_${monthName}_${selectedYear}`;
-    const officeName = getCleanOfficeTitle(officeDetails, admin?.gramPanchayat);
     const secName = officeDetails?.secretaryName || admin?.name || 'ग्राम पंचायत सचिव';
 
-    exportBulkVouchersToPDF(filename, monthPayments, monthName, selectedYear, officeName, secName);
+    exportBulkVouchersToPDF(filename, monthPayments, monthName, selectedYear, officeDetails, secName, officeDetails, admin);
   };
 
   const handleExportLedgerExcel = () => {
@@ -397,7 +398,8 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
       `Samagra ID: ${activeFamily.samagraId} | Family ID: ${activeFamily.familyId || 'N/A'} | Category: ${activeFamily.category}`,
       headers,
       rows,
-      admin?.gramPanchayat
+      officeDetails,
+      admin
     );
   };
 
@@ -420,7 +422,8 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
       `Overall Tax Demand, Collections, and Outstanding Balances`,
       headers,
       rows,
-      admin?.gramPanchayat
+      officeDetails,
+      admin
     );
   };
 
@@ -603,9 +606,7 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
                 {getCleanOfficeTitle(officeDetails, admin?.gramPanchayat)}
               </h1>
               <p className="text-xs text-slate-600 font-semibold">
-                {officeDetails?.address 
-                  ? officeDetails.address 
-                  : `जनपद पंचायत: ${officeDetails?.block || admin?.block || ''} | जिला: ${officeDetails?.district || admin?.district || ''}`}
+                {getCleanOfficeSubtitle(officeDetails, admin)}
               </p>
             </div>
 

@@ -10,14 +10,14 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenAbout }) => {
   return (
-    <footer className="bg-slate-900 text-slate-300 mt-auto print:hidden border-t border-slate-800 py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <footer className="bg-white text-slate-800 mt-auto print:hidden border-t-2 border-blue-200 shadow-sm py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
         
-        {/* QUICK NAVIGATION BUTTONS */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
+        {/* QUICK NAVIGATION BUTTONS (WHITE & BLUE) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-blue-50/70 rounded-2xl border border-blue-200 shadow-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-xs font-black text-slate-200 uppercase tracking-wider">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+            <span className="text-xs font-black text-blue-950 uppercase tracking-wider">
               {isHindi ? 'पोर्टल लिंक्स' : 'Portal Quick Links'}
             </span>
           </div>
@@ -25,7 +25,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setCurrentPage && setCurrentPage(Page.DASHBOARD)}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all border border-slate-700 cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-900 font-black text-xs rounded-xl transition-all border border-blue-200 cursor-pointer shadow-xs flex items-center gap-1.5"
             >
               <span>🏠</span>
               <span>{isHindi ? 'होम' : 'Home'}</span>
@@ -33,7 +33,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
 
             <button
               onClick={() => setCurrentPage && setCurrentPage(Page.LOGIN)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all border border-emerald-500 cursor-pointer shadow-sm flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl transition-all border border-blue-600 cursor-pointer shadow-sm flex items-center gap-1.5"
             >
               <span>🔐</span>
               <span>{isHindi ? 'लॉगिन' : 'Login'}</span>
@@ -41,7 +41,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
 
             <button
               onClick={() => setCurrentPage && setCurrentPage(Page.ADMIN_REGISTRATION)}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all border border-slate-700 cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-900 font-black text-xs rounded-xl transition-all border border-blue-200 cursor-pointer shadow-xs flex items-center gap-1.5"
             >
               <span>🏛️+</span>
               <span>{isHindi ? 'पंजीयन' : 'Register'}</span>
@@ -49,7 +49,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
 
             <button
               onClick={() => setCurrentPage && setCurrentPage(Page.DEVELOPER_PORTAL)}
-              className="px-3 py-1.5 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 font-bold text-xs rounded-xl transition-all border border-cyan-800 cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-950 font-black text-xs rounded-xl transition-all border border-blue-300 cursor-pointer flex items-center gap-1.5"
             >
               <span>💻</span>
               <span>{isHindi ? 'डेवलपर पोर्टल' : 'Developer'}</span>
@@ -58,7 +58,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
             {onOpenAbout && (
               <button
                 onClick={onOpenAbout}
-                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl transition-all border border-amber-400 cursor-pointer shadow-sm flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-black text-xs rounded-xl transition-all border border-amber-300 cursor-pointer shadow-xs flex items-center gap-1.5"
               >
                 <span>ℹ️</span>
                 <span>{isHindi ? 'अबाउट' : 'About'}</span>
@@ -68,24 +68,24 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
         </div>
 
         {/* BRANDING LOGO & SOCIAL MEDIA LINKS ROW */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-5 p-5 bg-slate-950/90 rounded-2xl border border-slate-800/80 shadow-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5 p-5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-2xl border border-blue-500 shadow-md text-white">
           
           {/* BRAND LOGO BADGE */}
           <div className="flex items-center gap-4">
             {/* CNZ CUSTOM STYLIZED VECTOR LOGO */}
-            <div className="relative flex items-center shrink-0">
+            <div className="relative flex items-center shrink-0 bg-white/10 p-1.5 rounded-xl border border-white/20">
               <svg className="w-14 h-10" viewBox="0 0 120 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {/* Network nodes line */}
-                <path d="M 45 10 L 60 4 L 78 12 L 95 6" stroke="#38BDF8" strokeWidth="2" strokeDasharray="2 2" />
-                <circle cx="45" cy="10" r="3" fill="#38BDF8" />
-                <circle cx="60" cy="4" r="3" fill="#38BDF8" />
-                <circle cx="78" cy="12" r="3" fill="#38BDF8" />
-                <circle cx="95" cy="6" r="3" fill="#38BDF8" />
+                <path d="M 45 10 L 60 4 L 78 12 L 95 6" stroke="#BAE6FD" strokeWidth="2" strokeDasharray="2 2" />
+                <circle cx="45" cy="10" r="3" fill="#BAE6FD" />
+                <circle cx="60" cy="4" r="3" fill="#BAE6FD" />
+                <circle cx="78" cy="12" r="3" fill="#BAE6FD" />
+                <circle cx="95" cy="6" r="3" fill="#BAE6FD" />
 
                 {/* C letter */}
                 <path d="M 28 14 C 18 14, 10 21, 10 30 C 10 39, 18 46, 28 46 C 34 46, 38 43, 40 40" stroke="white" strokeWidth="8" strokeLinecap="round" />
                 {/* Lime Dot inside C */}
-                <circle cx="25" cy="30" r="5" fill="#84CC16" />
+                <circle cx="25" cy="30" r="5" fill="#FACC15" />
 
                 {/* N letter */}
                 <path d="M 48 46 L 48 18 L 68 46 L 68 18" stroke="white" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
@@ -97,28 +97,28 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
 
             {/* BRAND DETAILS */}
             <div>
-              <p className="text-[10px] font-black tracking-widest text-cyan-400 uppercase leading-none mb-1">
+              <p className="text-[10px] font-black tracking-widest text-sky-200 uppercase leading-none mb-1">
                 DEVELOPER & OWNER BRAND
               </p>
               <h3 className="text-lg font-black text-white tracking-tight leading-none mb-1">
                 CHANCHAL NET ZONE
               </h3>
-              <p className="text-[11px] font-medium text-slate-400">
-                Hemlata Jatav • <a href="mailto:chanchalnetzone2026@gmail.com" className="text-emerald-400 hover:underline font-mono">chanchalnetzone2026@gmail.com</a>
+              <p className="text-xs font-semibold text-blue-100">
+                Hemlata Jatav • <a href="mailto:chanchalnetzone2026@gmail.com" className="text-yellow-300 hover:underline font-mono font-bold">chanchalnetzone2026@gmail.com</a>
               </p>
             </div>
           </div>
 
           {/* SOCIAL MEDIA ICONS ROW */}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-400 hidden lg:inline-block">Follow Us:</span>
+            <span className="text-xs font-bold text-blue-100 hidden lg:inline-block">Follow Us:</span>
 
             {/* Facebook */}
             <a
               href="https://facebook.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-xl bg-blue-950/80 hover:bg-blue-600 border border-blue-800/50 hover:border-blue-400 text-blue-400 hover:text-white flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-md cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white text-white hover:text-blue-700 border border-white/30 flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-sm cursor-pointer"
               title="Follow Chanchal Net Zone on Facebook"
             >
               <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -131,7 +131,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
               href="https://youtube.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-xl bg-red-950/80 hover:bg-red-600 border border-red-800/50 hover:border-red-400 text-red-500 hover:text-white flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-md cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white text-white hover:text-red-600 border border-white/30 flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-sm cursor-pointer"
               title="Subscribe to Chanchal Net Zone on YouTube"
             >
               <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
               href="https://wa.me/911234567890?text=Hello%20Chanchal%20Net%20Zone%20Gram%20Panchayat%20Tax%20Software"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-xl bg-emerald-950/80 hover:bg-emerald-600 border border-emerald-800/50 hover:border-emerald-400 text-emerald-400 hover:text-white flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-md cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white text-white hover:text-emerald-600 border border-white/30 flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-sm cursor-pointer"
               title="Chat on WhatsApp"
             >
               <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -155,7 +155,7 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
             {/* Email / Web */}
             <a
               href="mailto:chanchalnetzone2026@gmail.com"
-              className="w-10 h-10 rounded-xl bg-orange-950/80 hover:bg-orange-600 border border-orange-800/50 hover:border-orange-400 text-orange-400 hover:text-white flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-md cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white text-white hover:text-amber-600 border border-white/30 flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-sm cursor-pointer"
               title="Send Email"
             >
               <svg className="w-5 h-5 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="2">
@@ -167,11 +167,11 @@ const Footer: React.FC<FooterProps> = ({ isHindi = true, setCurrentPage, onOpenA
         </div>
 
         {/* COPYRIGHT BOTTOM LINE */}
-        <div className="border-t border-slate-800/80 pt-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-500 text-[11px]">
-          <p>© {new Date().getFullYear()} Gram Panchayat Tax Software. Developed & Owned by <strong className="text-slate-200">Chanchal Net Zone (Hemlata Jatav)</strong>.</p>
+        <div className="border-t border-blue-100 pt-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-700 text-xs font-semibold">
+          <p>© {new Date().getFullYear()} Gram Panchayat Tax Software. Developed & Owned by <strong className="text-blue-900 font-bold">Chanchal Net Zone (Hemlata Jatav)</strong>.</p>
           <div className="flex items-center gap-2">
-            <span className="bg-slate-800 text-amber-400 px-2 py-0.5 rounded text-[10px] font-mono font-bold">Chanchal Net Zone</span>
-            <span className="text-emerald-400 font-bold">● Active Portal</span>
+            <span className="bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded text-[11px] font-mono font-black border border-blue-200">Chanchal Net Zone</span>
+            <span className="text-emerald-700 font-bold">● Active Portal</span>
           </div>
         </div>
 

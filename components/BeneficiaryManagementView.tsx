@@ -4,6 +4,12 @@ import ViewHeader from './ViewHeader';
 import { formatDateDDMMYYYY, getCleanOfficeTitle } from '../utils/printUtils';
 import { exportBulkMemberCardsToPDF, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
+import {
   parseBeneficiaryFile,
   downloadSampleExcelTemplate,
   downloadSampleCsvTemplate,
@@ -73,6 +79,10 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
   const [deleteConfirmFamilyModal, setDeleteConfirmFamilyModal] = useState<{ id: string; name: string } | null>(null);
   const [isClearCorruptedModalOpen, setIsClearCorruptedModalOpen] = useState(false);
   const [isClearingCorrupted, setIsClearingCorrupted] = useState(false);
+
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
 
   // Multi-selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -191,17 +201,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSamagraDuplicate(formData.samagraId, editingFamily?.id)) {
-      alert(
-        isHindi
-          ? `⚠️ इस समग्र सदस्य आईडी (${formData.samagraId}) का हितग्राही पहले से पंजीकृत है! कृपया भिन्न समग्र आईडी का उपयोग करें।`
-          : `⚠️ Beneficiary with Samagra ID (${formData.samagraId}) is already registered! Please use a unique Samagra ID.`
-      );
-      return;
-    }
-
+  const executeSaveFamily = () => {
     if (editingFamily) {
       onUpdateFamily({
         ...editingFamily,
@@ -211,6 +211,90 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
       onAddFamily(formData);
     }
     setIsModalOpen(false);
+
+    // Show Success Confirmation Popup
+    setSuccessModalInfo({
+      title: editingFamily
+        ? isHindi
+          ? 'हितग्राही विवरण अद्यतन हुआ!'
+          : 'Beneficiary Updated Successfully!'
+        : isHindi
+        ? 'हितग्राही सफलतापूर्वक दर्ज हुआ!'
+        : 'Beneficiary Registered Successfully!',
+      message: isHindi
+        ? `हितग्राही श्री/श्रीमती ${formData.name} ${formData.surname} का विवरण ग्राम पंचायत पोर्टल में सुरक्षित कर लिया गया है।`
+        : `Beneficiary record for ${formData.name} ${formData.surname} has been saved successfully.`,
+      recordType: isHindi ? 'हितग्राही पंजीयन' : 'BENEFICIARY REGISTRATION',
+      details: [
+        { label: isHindi ? 'हितग्राही का नाम' : 'Name', value: `${formData.name} ${formData.surname}` },
+        { label: isHindi ? 'समग्र आईडी' : 'Samagra ID', value: formData.samagraId || '-' },
+        { label: isHindi ? 'पिता / पति का नाम' : 'Guardian', value: formData.guardianName || '-' },
+        { label: isHindi ? 'वार्ड क्रमांक' : 'Ward No', value: `वार्ड क्र. ${formData.wardNo}` },
+        { label: isHindi ? 'श्रेणी' : 'Category', value: formData.category || 'APL' },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        if (onOpenMemberCard) {
+          onOpenMemberCard({
+            id: editingFamily ? editingFamily.id : 'temp-' + Date.now(),
+            ...formData,
+          });
+        }
+      },
+      printButtonLabel: isHindi ? '🪪 सदस्य कार्ड देखें' : 'View Member Card',
+      onClose: () => setSuccessModalInfo(null),
+      isHindi,
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check duplicate by Samagra ID or by Name + Surname + Ward
+    const duplicateMatch = families.find((f) => {
+      if (f.id === editingFamily?.id) return false;
+      const sameSamagra =
+        formData.samagraId &&
+        f.samagraId &&
+        f.samagraId.trim().toLowerCase() === formData.samagraId.trim().toLowerCase();
+      const sameNameAndWard =
+        formData.name.trim().toLowerCase() === f.name.trim().toLowerCase() &&
+        formData.surname.trim().toLowerCase() === f.surname.trim().toLowerCase() &&
+        formData.wardNo === f.wardNo;
+      return sameSamagra || sameNameAndWard;
+    });
+
+    if (duplicateMatch) {
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान हितग्राही प्रविष्टि चेतावनी' : 'Duplicate Beneficiary Warning',
+        message: isHindi
+          ? `⚠️ इस विवरण (समग्र आईडी: ${formData.samagraId || '-'} अथवा नाम: ${formData.name} ${formData.surname}, वार्ड क्र. ${formData.wardNo}) से मिलता-जुलता हितग्राही रिकॉर्ड पहले से मौजूद है!`
+          : `⚠️ A beneficiary record with matching details (Samagra ID: ${formData.samagraId || '-'} or Name: ${formData.name} ${formData.surname}) already exists!`,
+        duplicateInfo: [
+          {
+            label: isHindi ? 'मौजूदा हितग्राही का नाम' : 'Existing Name',
+            value: `${duplicateMatch.name} ${duplicateMatch.surname}`,
+          },
+          { label: isHindi ? 'समग्र आईडी' : 'Samagra ID', value: duplicateMatch.samagraId || '-' },
+          { label: isHindi ? 'पिता / पति' : 'Guardian', value: duplicateMatch.guardianName || '-' },
+          {
+            label: isHindi ? 'वार्ड क्रमांक' : 'Ward No',
+            value: `वार्ड क्र. ${duplicateMatch.wardNo || '01'}`,
+          },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executeSaveFamily();
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
+
+    executeSaveFamily();
   };
 
   const handleLockAll = () => {
@@ -1146,16 +1230,15 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
               <p className="text-slate-600 text-xs mt-2 leading-relaxed">
                 {isHindi
                   ? `क्या आप निश्चित रूप से सभी ${corruptedFamilies.length} अमान्य (????) हितग्राही रिकॉर्ड्स को हटाना चाहते हैं? इसके बाद आप अपनी शुद्ध Excel (.xlsx) फ़ाइल सीधे आयात कर सकेंगे।`
-                  : `Are you sure you want to delete all ${corruptedFamilies.length} corrupted (????) records? You can then cleanly re-import your Excel (.xlsx) file.`}
+                  : `Are you sure you want to remove all ${corruptedFamilies.length} corrupted records? You can then re-import clean Excel files.`}
               </p>
             </div>
-
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 type="button"
                 disabled={isClearingCorrupted}
                 onClick={() => setIsClearCorruptedModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-xl cursor-pointer"
               >
                 {isHindi ? 'रद्द करें' : 'Cancel'}
               </button>
@@ -1163,17 +1246,13 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                 type="button"
                 disabled={isClearingCorrupted}
                 onClick={handleClearAllCorruptedRecords}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
               >
                 <span>🗑️</span>
                 <span>
                   {isClearingCorrupted
-                    ? isHindi
-                      ? 'सफाई जारी है...'
-                      : 'Clearing...'
-                    : isHindi
-                    ? 'हाँ, समस्त हटाएं'
-                    : 'Yes, Delete All'}
+                    ? (isHindi ? 'हटाया जा रहा है...' : 'Deleting...')
+                    : (isHindi ? 'हाँ, सभी हटाएं' : 'Yes, Delete All')}
                 </span>
               </button>
             </div>
@@ -1181,71 +1260,24 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
         </div>
       )}
 
-      {/* SINGLE RECORD DELETE CONFIRMATION MODAL */}
-      {deleteConfirmFamilyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
-          <div className="bg-white rounded-2xl border border-rose-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-fade-in text-center">
-            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl">
-              🗑️
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">
-                {isHindi ? 'हितग्राही हटाने की पुष्टि करें' : 'Confirm Beneficiary Deletion'}
-              </h3>
-              <p className="text-slate-600 text-xs mt-1">
-                {isHindi
-                  ? `क्या आप निश्चित रूप से "${deleteConfirmFamilyModal.name}" का रिकॉर्ड हटाना चाहते हैं?`
-                  : `Are you sure you want to delete "${deleteConfirmFamilyModal.name}"?`}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmFamilyModal(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                {isHindi ? 'रद्द करें (Cancel)' : 'Cancel'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onDeleteFamily(deleteConfirmFamilyModal.id);
-                  setDeleteConfirmFamilyModal(null);
-                }}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md cursor-pointer"
-              >
-                {isHindi ? 'हटाएं (Delete)' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* REGISTER / EDIT BENEFICIARY MODAL */}
+      {/* ADD / EDIT BENEFICIARY MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto font-sans">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 space-y-4 my-8 animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-lg">
-                {editingFamily
-                  ? isHindi
-                    ? 'हितग्राही विवरण संशोधित करें'
-                    : 'Edit Beneficiary Details'
-                  : isHindi
-                  ? 'नया हितग्राही पंजीयन'
-                  : 'Register New Beneficiary'}
+              <h3 className="font-bold text-slate-900 text-base sm:text-lg">
+                {editingFamily ? (isHindi ? 'हितग्राही विवरण संशोधित करें' : 'Edit Beneficiary Details') : (isHindi ? 'नया हितग्राही पंजीयन' : 'New Beneficiary Registration')}
               </h3>
               <button
-                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-sm font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
                     {isHindi ? 'समग्र सदस्य आईडी *' : 'Samagra Member ID *'}
@@ -1253,7 +1285,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   <input
                     type="text"
                     required
-                    value={formData.samagraId}
+                    value={formData.samagraId || ''}
                     onChange={(e) => setFormData({ ...formData, samagraId: e.target.value })}
                     placeholder="e.g. 112185879"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
@@ -1266,7 +1298,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="text"
-                    value={formData.familyId}
+                    value={formData.familyId || ''}
                     onChange={(e) => setFormData({ ...formData, familyId: e.target.value })}
                     placeholder="e.g. 22995551"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
@@ -1280,7 +1312,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   <input
                     type="text"
                     required
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={isHindi ? 'e.g. रामप्रसाद' : 'First Name'}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
@@ -1293,7 +1325,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="text"
-                    value={formData.surname}
+                    value={formData.surname || ''}
                     onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
                     placeholder={isHindi ? 'e.g. वर्मा' : 'Surname'}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
@@ -1306,7 +1338,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="text"
-                    value={formData.guardianName}
+                    value={formData.guardianName || ''}
                     onChange={(e) => setFormData({ ...formData, guardianName: e.target.value })}
                     placeholder={isHindi ? 'e.g. गोपीचंद वर्मा' : 'Father / Husband Name'}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
@@ -1319,7 +1351,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="tel"
-                    value={formData.mobile}
+                    value={formData.mobile || ''}
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                     placeholder="9826012345"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
@@ -1331,7 +1363,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                     {isHindi ? 'श्रेणी (Category)' : 'Category'}
                   </label>
                   <select
-                    value={formData.category}
+                    value={formData.category || BeneficiaryCategory.APL}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as BeneficiaryCategory })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-bold bg-slate-50"
                   >
@@ -1348,7 +1380,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="text"
-                    value={formData.wardNo}
+                    value={formData.wardNo || ''}
                     onChange={(e) => setFormData({ ...formData, wardNo: e.target.value })}
                     placeholder="01"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
@@ -1361,7 +1393,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   </label>
                   <input
                     type="text"
-                    value={formData.muhalla}
+                    value={formData.muhalla || ''}
                     onChange={(e) => setFormData({ ...formData, muhalla: e.target.value })}
                     placeholder={isHindi ? 'e.g. पटेल मोहल्ला' : 'Main Area'}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
@@ -1375,7 +1407,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                   <input
                     type="number"
                     min="1"
-                    value={formData.memberCount}
+                    value={formData.memberCount ?? 1}
                     onChange={(e) => setFormData({ ...formData, memberCount: Number(e.target.value) || 1 })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -1386,7 +1418,7 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
                 <label className="block font-bold text-slate-700 mb-1">{isHindi ? 'पूरा पता' : 'Address'}</label>
                 <textarea
                   rows={2}
-                  value={formData.address}
+                  value={formData.address || ''}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder={isHindi ? 'मकान नंबर, गली, ग्राम...' : 'Address details'}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
@@ -1412,6 +1444,12 @@ export const BeneficiaryManagementView: React.FC<BeneficiaryManagementViewProps>
           </div>
         </div>
       )}
+
+      {/* DUPLICATE ENTRY WARNING MODAL */}
+      {duplicateModalInfo && <DuplicateWarningModal {...duplicateModalInfo} />}
+
+      {/* SUCCESS CONFIRMATION POPUP MODAL */}
+      {successModalInfo && <SuccessPopupModal {...successModalInfo} />}
     </div>
   );
 };

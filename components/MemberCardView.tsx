@@ -9,6 +9,7 @@ import {
   BuildingPermissionRecord,
 } from '../types';
 import ViewHeader from './ViewHeader';
+import OfficialVoucherHeader from './OfficialVoucherHeader';
 import {
   getCleanOfficeTitle,
   getCleanOfficeSubtitle,
@@ -17,6 +18,7 @@ import {
   formatCurrency,
   getMonthName,
   triggerPrint,
+  DEFAULT_OFFICE_LOGO,
 } from '../utils/printUtils';
 
 interface MemberCardViewProps {
@@ -447,41 +449,16 @@ export const MemberCardView: React.FC<MemberCardViewProps> = ({
           {/* ---------------- OFFICIAL PRINTABLE MEMBER CARD & LEDGER ---------------- */}
           <div
             id="printable-area"
-            className="p-6 sm:p-8 bg-white rounded-2xl shadow-lg border-2 border-primary-200 space-y-6"
+            className="p-6 sm:p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-900 space-y-6"
           >
-            {/* PRINT CARD LETTERHEAD */}
-            <header className="flex flex-col sm:flex-row justify-between items-start border-b-2 pb-4 border-dashed border-primary-300 gap-4">
-              <div className="flex items-center gap-4">
-                <img
-                  src={logoUrl}
-                  alt="Emblem"
-                  className="w-14 h-14 object-contain shrink-0"
-                />
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-primary">
-                    {officeTitle}
-                  </h2>
-                  <p className="text-xs text-slate-600 font-bold">
-                    {officeSubtitle}
-                  </p>
-                  <p className="text-[11px] text-emerald-800 font-black mt-0.5 uppercase tracking-wider">
-                    {isHindi
-                      ? 'हितग्राही संपत्ति, कराधान एवं बकाया भुगतान रिपोर्ट कार्ड'
-                      : 'Beneficiary Member Profile & Tax Dues Ledger Card'}
-                  </p>
-                </div>
-              </div>
-              <div className="text-left sm:text-right text-xs text-slate-600 space-y-1 font-mono">
-                <p>
-                  <strong>{isHindi ? 'कार्ड जारी तिथि:' : 'Card Date:'}</strong>{' '}
-                  {formatDateDDMMYYYY(new Date())}
-                </p>
-                <p>
-                  <strong>{isHindi ? 'प्रपत्र क्रमांक:' : 'Document ID:'}</strong>{' '}
-                  CARD-{selectedFamily.samagraId.slice(-6)}-{new Date().getFullYear()}
-                </p>
-              </div>
-            </header>
+            {/* STANDARDIZED OFFICIAL GRAM PANCHAYAT BRANDING HEADER */}
+            <OfficialVoucherHeader
+              officeDetails={officeDetails}
+              adminPanchayat={admin?.gramPanchayat}
+              voucherTitle={isHindi ? 'हितग्राही सदस्य पहचान पत्र एवं कर लेजर प्रपत्र' : 'Beneficiary Member Profile & Tax Dues Ledger Card'}
+              voucherSubTitle={`${isHindi ? 'कार्ड जारी तिथि' : 'Card Date'}: ${formatDateDDMMYYYY(new Date())} | ${isHindi ? 'प्रपत्र क्रमांक' : 'Document ID'}: CARD-${selectedFamily.samagraId.slice(-6)}-${new Date().getFullYear()}`}
+              badgeBgColor="bg-emerald-50 text-emerald-950 border-emerald-300"
+            />
 
             {/* MEMBER & FINANCIAL SUMMARY GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

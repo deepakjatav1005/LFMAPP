@@ -1,5 +1,5 @@
 import { getSupabaseClient } from './supabase';
-import { Family, Tax, Payment, OfficeDetails, TaxType, Admin, ComplaintQuery, Subscription, SubscriptionPlan, TaxRates, TaxRatesLockInfo, TaxBeneficiaryList, AccountHead, Vendor, Work, CashbookVoucher, Announcement, BookingRentRecord, BuildingPermissionRecord } from '../types';
+import { Family, Tax, Payment, OfficeDetails, TaxType, Admin, ComplaintQuery, Subscription, SubscriptionPlan, TaxRates, TaxRatesLockInfo, TaxBeneficiaryList, AccountHead, Vendor, Work, CashbookVoucher, Announcement, BookingRentRecord, BuildingPermissionRecord, OtherTaxReceiptRecord, BusinessRegistrationRecord, DeveloperProfile } from '../types';
 
 // Helper function to safely upsert into Supabase tables, automatically stripping columns that do not exist in remote table schema or violating check constraints
 export async function safeUpsertToSupabase(
@@ -108,6 +108,8 @@ export async function fetchAdminUsersFromSupabase(): Promise<Admin[] | null> {
     return data.map((row: any) => ({
       id: row.id,
       name: row.name,
+      photoUrl: row.photo_url || row.avatar || '',
+      avatar: row.avatar || row.photo_url || '',
       designation: row.designation,
       gramPanchayat: row.gram_panchayat,
       block: row.block || '',
@@ -116,6 +118,8 @@ export async function fetchAdminUsersFromSupabase(): Promise<Admin[] | null> {
       mobile: row.mobile,
       email: row.email || '',
       password: row.password,
+      isApproved: row.is_approved !== false,
+      createdAt: row.created_at,
     }));
   } catch (err) {
     console.error('Exception in fetchAdminUsersFromSupabase:', err);
@@ -123,29 +127,183 @@ export async function fetchAdminUsersFromSupabase(): Promise<Admin[] | null> {
   }
 }
 
-export async function fetchAdminUserByMobileFromSupabase(mobile: string): Promise<Admin | null> {
+export async function fetchAdminUserByMobileFromSupabase(identifier: string): Promise<Admin | null> {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
+  const cleanId = identifier.trim();
+  if (!cleanId) return null;
+
   try {
-    const { data, error } = await supabase
+    // 1. Try direct ID match
+    const { data: byId } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('mobile', mobile.trim())
+      .eq('id', cleanId)
       .maybeSingle();
 
-    if (error || !data) return null;
-    return {
-      id: data.id,
-      name: data.name,
-      designation: data.designation,
-      gramPanchayat: data.gram_panchayat,
-      block: data.block || '',
-      district: data.district || '',
-      state: data.state || 'Madhya Pradesh',
-      mobile: data.mobile,
-      email: data.email || '',
-      password: data.password,
-    };
+    if (byId) {
+      return {
+        id: byId.id,
+        name: byId.name,
+        photoUrl: byId.photo_url || byId.avatar || '',
+        avatar: byId.avatar || byId.photo_url || '',
+        designation: byId.designation,
+        gramPanchayat: byId.gram_panchayat,
+        block: byId.block || '',
+        district: byId.district || '',
+        state: byId.state || 'Madhya Pradesh',
+        mobile: byId.mobile,
+        email: byId.email || '',
+        password: byId.password,
+        isApproved: byId.is_approved !== false,
+        createdAt: byId.created_at,
+      };
+    }
+
+    // 2. Try exact mobile match
+    const { data: byMobile } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('mobile', cleanId)
+      .maybeSingle();
+
+    if (byMobile) {
+      return {
+        id: byMobile.id,
+        name: byMobile.name,
+        photoUrl: byMobile.photo_url || byMobile.avatar || '',
+        avatar: byMobile.avatar || byMobile.photo_url || '',
+        designation: byMobile.designation,
+        gramPanchayat: byMobile.gram_panchayat,
+        block: byMobile.block || '',
+        district: byMobile.district || '',
+        state: byMobile.state || 'Madhya Pradesh',
+        mobile: byMobile.mobile,
+        email: byMobile.email || '',
+        password: byMobile.password,
+        isApproved: byMobile.is_approved !== false,
+        createdAt: byMobile.created_at,
+      };
+    }
+
+    // 3. Try username match
+    const { data: byUsername } = await supabase
+      .from('admin_users')
+      .select('*')
+      .ilike('username', cleanId)
+      .maybeSingle();
+
+    if (byUsername) {
+      return {
+        id: byUsername.id,
+        name: byUsername.name,
+        photoUrl: byUsername.photo_url || byUsername.avatar || '',
+        avatar: byUsername.avatar || byUsername.photo_url || '',
+        designation: byUsername.designation,
+        gramPanchayat: byUsername.gram_panchayat,
+        block: byUsername.block || '',
+        district: byUsername.district || '',
+        state: byUsername.state || 'Madhya Pradesh',
+        mobile: byUsername.mobile,
+        email: byUsername.email || '',
+        password: byUsername.password,
+        isApproved: byUsername.is_approved !== false,
+        createdAt: byUsername.created_at,
+      };
+    }
+
+    // 4. Try cleaned 10-digit mobile match
+    const digits = cleanId.replace(/\D/g, '').slice(-10);
+    if (digits.length >= 10) {
+      const { data: byDigits } = await supabase
+        .from('admin_users')
+        .select('*')
+        .ilike('mobile', `%${digits}%`)
+        .maybeSingle();
+
+      if (byDigits) {
+        return {
+          id: byDigits.id,
+          name: byDigits.name,
+          photoUrl: byDigits.photo_url || byDigits.avatar || '',
+          avatar: byDigits.avatar || byDigits.photo_url || '',
+          designation: byDigits.designation,
+          gramPanchayat: byDigits.gram_panchayat,
+          block: byDigits.block || '',
+          district: byDigits.district || '',
+          state: byDigits.state || 'Madhya Pradesh',
+          mobile: byDigits.mobile,
+          email: byDigits.email || '',
+          password: byDigits.password,
+          isApproved: byDigits.is_approved !== false,
+          createdAt: byDigits.created_at,
+        };
+      }
+    }
+
+    // 5. Try email match
+    if (cleanId.includes('@')) {
+      const { data: byEmail } = await supabase
+        .from('admin_users')
+        .select('*')
+        .ilike('email', cleanId)
+        .maybeSingle();
+
+      if (byEmail) {
+        return {
+          id: byEmail.id,
+          name: byEmail.name,
+          photoUrl: byEmail.photo_url || byEmail.avatar || '',
+          avatar: byEmail.avatar || byEmail.photo_url || '',
+          designation: byEmail.designation,
+          gramPanchayat: byEmail.gram_panchayat,
+          block: byEmail.block || '',
+          district: byEmail.district || '',
+          state: byEmail.state || 'Madhya Pradesh',
+          mobile: byEmail.mobile,
+          email: byEmail.email || '',
+          password: byEmail.password,
+          isApproved: byEmail.is_approved !== false,
+          createdAt: byEmail.created_at,
+        };
+      }
+    }
+
+    // 6. Try matching from full list
+    const { data: allAdmins } = await supabase.from('admin_users').select('*');
+    if (allAdmins && allAdmins.length > 0) {
+      const matched = allAdmins.find((a: any) => {
+        const aMobile = (a.mobile || '').replace(/\D/g, '').slice(-10);
+        const uMobile = cleanId.replace(/\D/g, '').slice(-10);
+        if (uMobile.length >= 10 && aMobile === uMobile) return true;
+        if (a.email && a.email.trim().toLowerCase() === cleanId.toLowerCase()) return true;
+        if (a.username && a.username.trim().toLowerCase() === cleanId.toLowerCase()) return true;
+        if (a.gram_panchayat && a.gram_panchayat.toLowerCase().includes(cleanId.toLowerCase())) return true;
+        if (a.name && a.name.toLowerCase() === cleanId.toLowerCase()) return true;
+        return false;
+      });
+
+      if (matched) {
+        return {
+          id: matched.id,
+          name: matched.name,
+          photoUrl: matched.photo_url || matched.avatar || '',
+          avatar: matched.avatar || matched.photo_url || '',
+          designation: matched.designation,
+          gramPanchayat: matched.gram_panchayat,
+          block: matched.block || '',
+          district: matched.district || '',
+          state: matched.state || 'Madhya Pradesh',
+          mobile: matched.mobile,
+          email: matched.email || '',
+          password: matched.password,
+          isApproved: matched.is_approved !== false,
+          createdAt: matched.created_at,
+        };
+      }
+    }
+
+    return null;
   } catch (err) {
     return null;
   }
@@ -160,18 +318,34 @@ export async function saveAdminUserToSupabase(admin: Admin): Promise<{ success: 
   try {
     const cleanMobile = admin.mobile.trim();
 
-    // Check if user already exists by mobile
+    // Check if user already exists by mobile or id
     const { data: existing } = await supabase
       .from('admin_users')
-      .select('id')
-      .eq('mobile', cleanMobile)
+      .select('id, photo_url')
+      .or(`id.eq.${admin.id},mobile.eq.${cleanMobile}`)
       .maybeSingle();
 
     const finalId = existing?.id || admin.id;
 
+    // Handle photo upload to storage bucket if data URL
+    let finalPhotoUrl = admin.photoUrl || admin.avatar || existing?.photo_url || '';
+    if (finalPhotoUrl.startsWith('data:image')) {
+      try {
+        const uploadRes = await uploadImageToSupabaseBucket(finalPhotoUrl, 'photos', 'admins');
+        if (uploadRes.success && uploadRes.publicUrl) {
+          finalPhotoUrl = uploadRes.publicUrl;
+        }
+      } catch (uploadErr) {
+        console.warn('Admin photo bucket upload fallback:', uploadErr);
+      }
+    }
+
     const payload = {
       id: finalId,
+      username: cleanMobile,
       name: admin.name,
+      photo_url: finalPhotoUrl,
+      avatar: finalPhotoUrl,
       designation: admin.designation,
       gram_panchayat: admin.gramPanchayat,
       block: admin.block || '',
@@ -180,6 +354,8 @@ export async function saveAdminUserToSupabase(admin: Admin): Promise<{ success: 
       mobile: cleanMobile,
       email: admin.email || '',
       password: admin.password || 'password',
+      is_approved: admin.isApproved !== undefined ? admin.isApproved : true,
+      updated_at: new Date().toISOString(),
     };
 
     const res = await safeUpsertToSupabase('admin_users', payload, 'id');
@@ -193,6 +369,18 @@ export async function saveAdminUserToSupabase(admin: Admin): Promise<{ success: 
   } catch (err: any) {
     console.error('Exception saving admin user to Supabase:', err);
     return { success: false, message: err?.message || 'Database error' };
+  }
+}
+
+export async function deleteAdminUserFromSupabase(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('admin_users').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Exception deleting admin user from Supabase:', err);
+    return false;
   }
 }
 
@@ -761,25 +949,48 @@ export async function savePaymentToSupabase(payment: Payment): Promise<boolean> 
 // 5. OFFICE DETAILS
 // ==============================================================================
 
-export async function fetchOfficeDetailsFromSupabase(adminId?: string): Promise<OfficeDetails | null> {
+export async function fetchOfficeDetailsFromSupabase(adminId?: string, gramPanchayat?: string): Promise<OfficeDetails | null> {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
   try {
-    let query = supabase.from('office_details').select('*');
-    if (adminId) query = query.eq('admin_id', adminId);
-    const { data, error } = await query.maybeSingle();
-    if (error || !data) return null;
+    let data: any = null;
+
+    // Strategy 1: Search by admin_id ordered by latest updated_at
+    if (adminId) {
+      const res = await supabase.from('office_details').select('*').eq('admin_id', adminId).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      if (res.data) data = res.data;
+    }
+
+    // Strategy 2: Search by primary key id matching adminId
+    if (!data && adminId) {
+      const res = await supabase.from('office_details').select('*').eq('id', adminId).maybeSingle();
+      if (res.data) data = res.data;
+    }
+
+    // Strategy 3: Search by gram_panchayat name
+    if (!data && gramPanchayat) {
+      const res = await supabase.from('office_details').select('*').ilike('gram_panchayat', `%${gramPanchayat.trim()}%`).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      if (res.data) data = res.data;
+    }
+
+    // Strategy 4: Fallback to primary_office / default_office or latest updated record
+    if (!data) {
+      const res = await supabase.from('office_details').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      if (res.data) data = res.data;
+    }
+
+    if (!data) return null;
 
     return {
-      officeName: data.office_name || '',
+      officeName: data.office_name || data.panchayat_name || '',
       secretaryName: data.secretary_name || '',
       sarpanchName: data.sarpanch_name || '',
-      contactPhone: data.contact_phone || '',
-      email: data.email || '',
+      contactPhone: data.contact_phone || data.office_mobile || '',
+      email: data.email || data.office_email || '',
       address: data.address || '',
-      block: data.block || '',
-      district: data.district || '',
-      state: data.state || 'मध्य प्रदेश',
+      block: data.block || data.block_name || '',
+      district: data.district || data.district_name || '',
+      state: data.state || data.state_name || 'मध्य प्रदेश',
       pincode: data.pincode || '',
       bankName: data.bank_name || '',
       accountName: data.account_name || '',
@@ -787,38 +998,83 @@ export async function fetchOfficeDetailsFromSupabase(adminId?: string): Promise<
       ifscCode: data.ifsc_code || '',
       logoUrl: data.logo_url || '',
       qrCodeUrl: data.qr_code_url || '',
+      adminId: data.admin_id || data.id || '',
+      gramPanchayat: data.gram_panchayat || '',
     };
   } catch (err) {
+    console.warn('Error fetching office details from Supabase:', err);
     return null;
   }
 }
 
-export async function saveOfficeDetailsToSupabase(details: OfficeDetails, adminId?: string, gramPanchayat?: string): Promise<boolean> {
+export async function saveOfficeDetailsToSupabase(details: OfficeDetails, adminId?: string, gramPanchayat?: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return { success: false, error: 'Supabase client is not initialized' };
+
+    const primaryId = adminId || details.adminId || 'primary_office';
+    const cleanPanchayat = gramPanchayat || details.gramPanchayat || details.officeName || '';
+
+    let finalLogoUrl = details.logoUrl || '';
+    let finalQrUrl = details.qrCodeUrl || '';
+
+    // Auto-upload base64 images to Supabase storage
+    if (finalLogoUrl.startsWith('data:image')) {
+      try {
+        const logoUp = await uploadImageToSupabaseBucket(finalLogoUrl, 'panchayat-assets', 'office_logos');
+        if (logoUp.success && logoUp.publicUrl) finalLogoUrl = logoUp.publicUrl;
+      } catch (e) {}
+    }
+    if (finalQrUrl.startsWith('data:image')) {
+      try {
+        const qrUp = await uploadImageToSupabaseBucket(finalQrUrl, 'panchayat-assets', 'office_qr');
+        if (qrUp.success && qrUp.publicUrl) finalQrUrl = qrUp.publicUrl;
+      } catch (e) {}
+    }
+
     const payload = {
-      id: adminId || 'default_office',
-      office_name: details.officeName,
-      secretary_name: details.secretaryName,
-      sarpanch_name: details.sarpanchName,
-      contact_phone: details.contactPhone,
-      email: details.email,
-      address: details.address,
-      block: details.block,
-      district: details.district,
-      state: details.state,
-      pincode: details.pincode,
-      bank_name: details.bankName,
-      account_name: details.accountName,
-      account_number: details.accountNumber,
-      ifsc_code: details.ifscCode,
-      logo_url: details.logoUrl,
-      qr_code_url: details.qrCodeUrl,
+      id: primaryId,
+      admin_id: adminId || details.adminId || primaryId,
+      gram_panchayat: cleanPanchayat,
+      office_name: details.officeName || '',
+      panchayat_name: details.officeName || cleanPanchayat,
+      secretary_name: details.secretaryName || '',
+      sarpanch_name: details.sarpanchName || '',
+      contact_phone: details.contactPhone || '',
+      office_mobile: details.contactPhone || '',
+      email: details.email || '',
+      office_email: details.email || '',
+      address: details.address || '',
+      block: details.block || '',
+      block_name: details.block || '',
+      district: details.district || '',
+      district_name: details.district || '',
+      state: details.state || 'मध्य प्रदेश',
+      state_name: details.state || 'Madhya Pradesh',
+      pincode: details.pincode || '',
+      bank_name: details.bankName || '',
+      account_name: details.accountName || '',
+      account_number: details.accountNumber || '',
+      ifsc_code: details.ifscCode || '',
+      logo_url: finalLogoUrl,
+      qr_code_url: finalQrUrl,
+      updated_at: new Date().toISOString(),
     };
 
-    const res = await safeUpsertToSupabase('office_details', payload);
-    return res.success;
-  } catch (err) {
-    return false;
+    // Upsert primaryId record
+    const res = await safeUpsertToSupabase('office_details', payload, 'id');
+    
+    // Also update any primary_office row if primaryId is different to guarantee global sync
+    if (primaryId !== 'primary_office') {
+      try {
+        await safeUpsertToSupabase('office_details', { ...payload, id: 'primary_office' }, 'id');
+      } catch (e) {}
+    }
+
+    return { success: res.success, error: res.error };
+  } catch (err: any) {
+    console.error('Error saving office details to Supabase:', err);
+    return { success: false, error: err?.message || 'Failed to save office details' };
   }
 }
 
@@ -894,6 +1150,18 @@ export async function saveComplaintToSupabase(complaint: ComplaintQuery): Promis
   }
 }
 
+export async function deleteComplaintFromSupabase(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('complaints_queries').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Error deleting complaint from Supabase:', err);
+    return false;
+  }
+}
+
 // ==============================================================================
 // 7. USER SUBSCRIPTIONS
 // ==============================================================================
@@ -948,6 +1216,18 @@ export async function saveSubscriptionToSupabase(sub: Subscription): Promise<boo
     return res.success;
   } catch (err) {
     console.warn('Exception in saveSubscriptionToSupabase:', err);
+    return false;
+  }
+}
+
+export async function deleteSubscriptionFromSupabase(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('user_subscriptions').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Error deleting subscription from Supabase:', err);
     return false;
   }
 }
@@ -1243,6 +1523,14 @@ export async function fetchCashbookVouchersFromSupabase(): Promise<CashbookVouch
       workId: row.work_id || '',
       paymentMode: row.payment_mode || 'BANK',
       remarks: row.remarks || '',
+      proposalNo: row.proposal_no || '',
+      proposalDate: row.proposal_date || '',
+      billNo: row.bill_no || '',
+      billDate: row.bill_date || '',
+      workSanctionAmount: row.work_sanction_amount !== undefined && row.work_sanction_amount !== null ? Number(row.work_sanction_amount) : undefined,
+      previousExpendedAmount: row.previous_expended_amount !== undefined && row.previous_expended_amount !== null ? Number(row.previous_expended_amount) : undefined,
+      remainingAmount: row.remaining_amount !== undefined && row.remaining_amount !== null ? Number(row.remaining_amount) : undefined,
+      expenseCategory: row.expense_category || (row.work_id ? 'WORK' : 'OFFICE'),
       gramPanchayat: row.gram_panchayat || '',
       adminId: row.admin_id || '',
     }));
@@ -1254,7 +1542,7 @@ export async function fetchCashbookVouchersFromSupabase(): Promise<CashbookVouch
 
 export async function saveCashbookVoucherToSupabase(voucher: CashbookVoucher): Promise<boolean> {
   try {
-    const payload = {
+    const payload: Record<string, any> = {
       id: voucher.id,
       voucher_no: voucher.voucherNo,
       voucher_type: voucher.voucherType,
@@ -1266,6 +1554,14 @@ export async function saveCashbookVoucherToSupabase(voucher: CashbookVoucher): P
       work_id: voucher.workId || null,
       payment_mode: voucher.paymentMode || 'BANK',
       remarks: voucher.remarks || '',
+      proposal_no: voucher.proposalNo || null,
+      proposal_date: voucher.proposalDate || null,
+      bill_no: voucher.billNo || null,
+      bill_date: voucher.billDate || null,
+      work_sanction_amount: voucher.workSanctionAmount !== undefined ? voucher.workSanctionAmount : null,
+      previous_expended_amount: voucher.previousExpendedAmount !== undefined ? voucher.previousExpendedAmount : null,
+      remaining_amount: voucher.remainingAmount !== undefined ? voucher.remainingAmount : null,
+      expense_category: voucher.expenseCategory || (voucher.workId ? 'WORK' : 'OFFICE'),
       gram_panchayat: voucher.gramPanchayat || '',
       admin_id: voucher.adminId || '',
     };
@@ -1293,8 +1589,9 @@ export async function deletePaymentFromSupabase(paymentId: string): Promise<bool
   const supabase = getSupabaseClient();
   if (!supabase) return false;
   try {
-    const { error } = await supabase.from('payments').delete().eq('id', paymentId);
-    return !error;
+    const { error: err1 } = await supabase.from('tax_receipts').delete().eq('id', paymentId);
+    const { error: err2 } = await supabase.from('payments').delete().eq('id', paymentId);
+    return !err1 || !err2;
   } catch (err) {
     console.error('Error deleting payment from Supabase:', err);
     return false;
@@ -1305,8 +1602,9 @@ export async function deleteTaxFromSupabase(taxId: string): Promise<boolean> {
   const supabase = getSupabaseClient();
   if (!supabase) return false;
   try {
-    const { error } = await supabase.from('taxes').delete().eq('id', taxId);
-    return !error;
+    const { error: err1 } = await supabase.from('tax_demands').delete().eq('id', taxId);
+    const { error: err2 } = await supabase.from('taxes').delete().eq('id', taxId);
+    return !err1 || !err2;
   } catch (err) {
     console.error('Error deleting tax demand from Supabase:', err);
     return false;
@@ -1554,6 +1852,447 @@ export async function deleteBuildingPermissionFromSupabase(id: string): Promise<
   } catch (err) {
     console.error('Error deleting building permission from Supabase:', err);
     return false;
+  }
+}
+
+// ==============================================================================
+// 14. OTHER TAX RECEIPTS (3.11 - अन्य कर रसीद प्रबंधन)
+// ==============================================================================
+
+export async function fetchOtherTaxReceiptsFromSupabase(): Promise<OtherTaxReceiptRecord[] | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.from('other_tax_receipts').select('*').order('created_at', { ascending: false });
+    if (error || !data) return null;
+
+    return data.map((row: any) => ({
+      id: row.id,
+      receiptNo: row.receipt_no || row.receiptNo || `OTR-${row.id}`,
+      familyId: row.family_id || row.familyId,
+      beneficiaryName: row.beneficiary_name || row.beneficiaryName || '',
+      guardianName: row.guardian_name || row.guardianName,
+      fatherHusbandName: row.father_husband_name || row.guardian_name || row.guardianName || '',
+      mobile: row.mobile,
+      wardNo: row.ward_no || row.wardNo,
+      muhalla: row.muhalla,
+      samagraId: row.samagra_id || row.samagraId,
+      familySamagraId: row.family_samagra_id || row.familySamagraId,
+      category: row.category || 'APL',
+      taxHead: row.tax_head || row.taxHead || 'अन्य कर (Other Tax)',
+      taxAmount: Number(row.tax_amount || row.taxAmount || 0),
+      receiptDate: row.receipt_date || row.receiptDate || row.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      paymentMode: row.payment_mode || row.paymentMode || 'CASH',
+      transactionId: row.transaction_id || row.transactionId,
+      collectorName: row.collector_name || row.collectorName || '',
+      remarks: row.remarks || '',
+      createdAt: row.created_at || new Date().toISOString(),
+      cashbookVoucherId: row.cashbook_voucher_id || row.cashbookVoucherId,
+      gramPanchayat: row.gram_panchayat || row.gramPanchayat || '',
+      adminId: row.admin_id || row.adminId || '',
+    }));
+  } catch (err) {
+    console.error('Error fetching other tax receipts from Supabase:', err);
+    return null;
+  }
+}
+
+export async function saveOtherTaxReceiptToSupabase(rec: OtherTaxReceiptRecord): Promise<boolean> {
+  try {
+    const payload = {
+      id: rec.id,
+      receipt_no: rec.receiptNo,
+      family_id: rec.familyId,
+      beneficiary_name: rec.beneficiaryName,
+      guardian_name: rec.guardianName || rec.fatherHusbandName || '',
+      mobile: rec.mobile || '',
+      ward_no: rec.wardNo || '',
+      muhalla: rec.muhalla || '',
+      samagra_id: rec.samagraId || '',
+      family_samagra_id: rec.familySamagraId || '',
+      category: rec.category || 'APL',
+      tax_head: rec.taxHead,
+      tax_amount: Number(rec.taxAmount) || 0,
+      receipt_date: rec.receiptDate || new Date().toISOString().split('T')[0],
+      payment_mode: rec.paymentMode || 'CASH',
+      transaction_id: rec.transactionId || '',
+      collector_name: rec.collectorName || '',
+      remarks: rec.remarks || '',
+      cashbook_voucher_id: rec.cashbookVoucherId || '',
+      gram_panchayat: rec.gramPanchayat || '',
+      admin_id: rec.adminId || '',
+    };
+
+    const res = await safeUpsertToSupabase('other_tax_receipts', payload, 'id');
+    return res.success;
+  } catch (err) {
+    console.error('Error saving other tax receipt to Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteOtherTaxReceiptFromSupabase(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('other_tax_receipts').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Error deleting other tax receipt from Supabase:', err);
+    return false;
+  }
+}
+
+// ==============================================================================
+// 15. COMMERCIAL SHOP & BUSINESS REGISTRATION (3.12 व्यावसायिक दुकान एवं संस्थान पंजीयन)
+// ==============================================================================
+
+export async function fetchBusinessRegistrationsFromSupabase(adminId?: string, gramPanchayat?: string): Promise<BusinessRegistrationRecord[] | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  try {
+    let query = supabase.from('business_registrations').select('*').order('created_at', { ascending: false });
+
+    if (adminId) {
+      query = query.or(`admin_id.eq.${adminId},admin_id.is.null`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Supabase business_registrations query error (falling back to local state):', error.message || error);
+      return null;
+    }
+    if (!data) return [];
+
+    return data.map((row: any) => ({
+      id: row.id,
+      certificateNo: row.certificate_no || row.voucher_no || `GP-BRC/${new Date().getFullYear()}/${row.id.slice(0, 6)}`,
+      familyId: row.family_id || '',
+      memberId: row.member_id || row.samagra_member_id || '',
+      ownerName: row.owner_name || row.beneficiary_name || '',
+      guardianName: row.guardian_name || row.father_husband_name || '',
+      mobile: row.mobile || '',
+      wardNo: row.ward_no || '01',
+      muhalla: row.muhalla || '',
+      samagraFamilyId: row.samagra_family_id || row.family_id || '',
+      samagraMemberId: row.samagra_member_id || row.member_id || row.samagra_id || '',
+      category: row.category || 'General',
+      businessName: row.business_name || row.shop_name || '',
+      businessType: row.business_type || 'दुकान / व्यवसाय (Shop / Business)',
+      shopAddress: row.shop_address || row.address || '',
+      shopAreaSqFt: Number(row.shop_area_sq_ft || row.area_sq_ft || 0),
+      shopTotalCost: row.shop_total_cost ? Number(row.shop_total_cost) : undefined,
+      annualTaxRate: row.annual_tax_rate ? Number(row.annual_tax_rate) : undefined,
+      gstNumber: row.gst_number || row.trade_license_no || '',
+      photoUrl: row.photo_url || '',
+      registrationDate: row.registration_date || row.issue_date || new Date().toISOString().split('T')[0],
+      validUpto: row.valid_upto || `31-03-${new Date().getFullYear() + 1}`,
+      status: (row.status as any) || 'ACTIVE',
+      remarks: row.remarks || '',
+      createdAt: row.created_at || new Date().toISOString(),
+      gramPanchayat: row.gram_panchayat || '',
+      adminId: row.admin_id || '',
+    }));
+  } catch (err) {
+    console.warn('Error fetching business registrations from Supabase:', err);
+    return null;
+  }
+}
+
+export async function saveBusinessRegistrationToSupabase(record: BusinessRegistrationRecord): Promise<boolean> {
+  try {
+    let finalPhotoUrl = record.photoUrl || '';
+
+    // If photo is a base64 string, upload to Supabase Storage bucket 'photos'
+    if (finalPhotoUrl.startsWith('data:image')) {
+      try {
+        const uploadRes = await uploadImageToSupabaseBucket(finalPhotoUrl, 'photos', 'business_photos');
+        if (uploadRes.success && uploadRes.publicUrl) {
+          finalPhotoUrl = uploadRes.publicUrl;
+          record.photoUrl = finalPhotoUrl;
+        }
+      } catch (uploadErr) {
+        console.warn('Auto storage upload for business photo skipped:', uploadErr);
+      }
+    }
+
+    const payload = {
+      id: record.id,
+      certificate_no: record.certificateNo,
+      voucher_no: record.certificateNo,
+      family_id: record.familyId || '',
+      member_id: record.memberId || record.samagraMemberId || '',
+      owner_name: record.ownerName,
+      beneficiary_name: record.ownerName,
+      guardian_name: record.guardianName || '',
+      mobile: record.mobile || '',
+      ward_no: record.wardNo || '01',
+      muhalla: record.muhalla || '',
+      samagra_family_id: record.samagraFamilyId || '',
+      samagra_member_id: record.samagraMemberId || record.memberId || '',
+      category: record.category || 'General',
+      business_name: record.businessName,
+      shop_name: record.businessName,
+      business_type: record.businessType,
+      shop_address: record.shopAddress,
+      address: record.shopAddress,
+      shop_area_sq_ft: Number(record.shopAreaSqFt) || 0,
+      area_sq_ft: Number(record.shopAreaSqFt) || 0,
+      shop_total_cost: record.shopTotalCost ? Number(record.shopTotalCost) : null,
+      annual_tax_rate: record.annualTaxRate ? Number(record.annualTaxRate) : null,
+      gst_number: record.gstNumber || '',
+      photo_url: finalPhotoUrl,
+      registration_date: record.registrationDate || new Date().toISOString().split('T')[0],
+      valid_upto: record.validUpto || '',
+      status: record.status || 'ACTIVE',
+      remarks: record.remarks || '',
+      created_at: record.createdAt || new Date().toISOString(),
+      gram_panchayat: record.gramPanchayat || '',
+      admin_id: record.adminId || '',
+    };
+
+    const res = await safeUpsertToSupabase('business_registrations', payload, 'id');
+    return res.success;
+  } catch (err) {
+    console.error('Error saving business registration to Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteBusinessRegistrationFromSupabase(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('business_registrations').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Error deleting business registration from Supabase:', err);
+    return false;
+  }
+}
+
+// ==============================================================================
+// 16. SUPABASE STORAGE BUCKET UPLOAD UTILITY
+// ==============================================================================
+
+/**
+ * Uploads an image file or blob to Supabase Storage bucket ('photos' / 'panchayat-assets') and returns the permanent public URL
+ */
+export async function uploadImageToSupabaseBucket(
+  fileOrBlob: File | Blob | string,
+  bucketName: string = 'photos',
+  folder: string = 'assets'
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'Supabase client is not configured' };
+  }
+
+  try {
+    let fileToUpload: File | Blob;
+    let fileExt = 'jpg';
+    let contentType = 'image/jpeg';
+
+    if (typeof fileOrBlob === 'string') {
+      if (fileOrBlob.startsWith('http://') || fileOrBlob.startsWith('https://')) {
+        // It's already a valid HTTP URL
+        return { success: true, publicUrl: fileOrBlob };
+      }
+
+      // If it's a data URL / base64 string, convert to Blob reliably
+      if (fileOrBlob.startsWith('data:')) {
+        const commaIndex = fileOrBlob.indexOf(',');
+        if (commaIndex !== -1) {
+          const header = fileOrBlob.substring(0, commaIndex);
+          const base64Data = fileOrBlob.substring(commaIndex + 1).replace(/\s/g, '');
+          const mimeMatch = header.match(/data:([^;,]+)/);
+          contentType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          fileExt = contentType.split('/')[1]?.split('+')[0] || 'jpg';
+          if (fileExt === 'jpeg') fileExt = 'jpg';
+
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          fileToUpload = new Blob([byteNumbers], { type: contentType });
+        } else {
+          return { success: false, error: 'Invalid data URL format (missing comma)' };
+        }
+      } else {
+        return { success: true, publicUrl: fileOrBlob };
+      }
+    } else {
+      fileToUpload = fileOrBlob;
+      if (fileOrBlob instanceof File) {
+        fileExt = fileOrBlob.name.split('.').pop() || 'jpg';
+        contentType = fileOrBlob.type || 'image/jpeg';
+      }
+    }
+
+    const cleanFolder = folder.replace(/^\/+|\/+$/g, '');
+    const cleanExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${cleanExt || 'jpg'}`;
+    const filePath = `${cleanFolder}/${fileName}`;
+
+    // Target bucket candidates: specified bucket first, followed by fallbacks
+    const candidateBuckets = Array.from(new Set([bucketName, 'photos', 'panchayat-assets', 'assets', 'public']));
+
+    let lastError: string | null = null;
+    for (const targetBucket of candidateBuckets) {
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from(targetBucket)
+          .upload(filePath, fileToUpload, {
+            cacheControl: '31536000',
+            upsert: true,
+            contentType,
+          });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from(targetBucket).getPublicUrl(filePath);
+          if (urlData && urlData.publicUrl) {
+            console.log(`Successfully uploaded photo to Supabase storage bucket '${targetBucket}':`, urlData.publicUrl);
+            return { success: true, publicUrl: urlData.publicUrl };
+          }
+        } else {
+          lastError = uploadError.message;
+          console.warn(`Upload attempt failed for bucket '${targetBucket}':`, uploadError.message);
+
+          // If bucket not found, attempt to create it if client has permissions
+          if (uploadError.message.toLowerCase().includes('not found') || uploadError.message.toLowerCase().includes('bucket')) {
+            try {
+              await supabase.storage.createBucket(targetBucket, { public: true });
+              // Retry upload once after create attempt
+              const { error: retryErr } = await supabase.storage
+                .from(targetBucket)
+                .upload(filePath, fileToUpload, {
+                  cacheControl: '31536000',
+                  upsert: true,
+                  contentType,
+                });
+              if (!retryErr) {
+                const { data: retryUrlData } = supabase.storage.from(targetBucket).getPublicUrl(filePath);
+                if (retryUrlData?.publicUrl) {
+                  return { success: true, publicUrl: retryUrlData.publicUrl };
+                }
+              }
+            } catch (createErr) {
+              // ignore and try next bucket
+            }
+          }
+        }
+      } catch (bucketErr: any) {
+        lastError = bucketErr?.message || 'Bucket upload error';
+      }
+    }
+
+    // If storage bucket upload failed (e.g. storage bucket not created or RLS blocked), fallback to data URL string if provided
+    if (typeof fileOrBlob === 'string' && fileOrBlob.startsWith('data:image')) {
+      console.warn('Storage bucket upload failed, using optimized base64 payload as fallback for database saving.');
+      return { success: true, publicUrl: fileOrBlob };
+    }
+
+    return { success: false, error: lastError || 'Could not upload to any Supabase storage bucket' };
+  } catch (err: any) {
+    console.error('Exception uploading photo to Supabase storage:', err);
+    return { success: false, error: err?.message || 'Storage upload error' };
+  }
+}
+
+// ==============================================================================
+// 17. DEVELOPER PROFILE & OWNER BRANDING
+// ==============================================================================
+
+export async function fetchDeveloperProfileFromSupabase(): Promise<DeveloperProfile | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('developer_profile')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error && !error.message.includes('developer_profile')) {
+        console.warn('Error fetching developer profile from Supabase:', error.message);
+      }
+      return null;
+    }
+
+    return {
+      id: data.id || 'master_developer',
+      name: data.name || '',
+      company: data.company || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      version: data.version || 'v3.0 Multi-Tenant Pro',
+      supportHours: data.support_hours || data.supporthours || '',
+      address: data.address || '',
+      logoUrl: data.logo_url || data.logourl || '',
+      avatarUrl: data.avatar_url || data.avatarurl || '',
+      qrCodeUrl: data.qr_code_url || data.qrcodeurl || '',
+      upiId: data.upi_id || data.upiid || '',
+      updatedAt: data.updated_at || '',
+    };
+  } catch (err) {
+    console.warn('Exception fetching developer profile from Supabase:', err);
+    return null;
+  }
+}
+
+export async function saveDeveloperProfileToSupabase(profile: DeveloperProfile): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { success: false, error: 'Supabase client is not configured' };
+
+  try {
+    let finalLogoUrl = profile.logoUrl || '';
+    let finalAvatarUrl = profile.avatarUrl || '';
+    let finalQrUrl = profile.qrCodeUrl || '';
+
+    // Auto-upload any base64 image data URLs to Supabase Storage
+    if (finalLogoUrl.startsWith('data:image')) {
+      try {
+        const upRes = await uploadImageToSupabaseBucket(finalLogoUrl, 'photos', 'developer_branding');
+        if (upRes.success && upRes.publicUrl) finalLogoUrl = upRes.publicUrl;
+      } catch (e) {}
+    }
+    if (finalAvatarUrl.startsWith('data:image')) {
+      try {
+        const upRes = await uploadImageToSupabaseBucket(finalAvatarUrl, 'photos', 'developer_avatars');
+        if (upRes.success && upRes.publicUrl) finalAvatarUrl = upRes.publicUrl;
+      } catch (e) {}
+    }
+    if (finalQrUrl.startsWith('data:image')) {
+      try {
+        const upRes = await uploadImageToSupabaseBucket(finalQrUrl, 'photos', 'developer_payments');
+        if (upRes.success && upRes.publicUrl) finalQrUrl = upRes.publicUrl;
+      } catch (e) {}
+    }
+
+    const payload = {
+      id: profile.id || 'master_developer',
+      name: profile.name || '',
+      company: profile.company || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      version: profile.version || 'v3.0 Multi-Tenant Pro',
+      support_hours: profile.supportHours || '',
+      address: profile.address || '',
+      logo_url: finalLogoUrl,
+      avatar_url: finalAvatarUrl,
+      qr_code_url: finalQrUrl,
+      upi_id: profile.upiId || '',
+      updated_at: new Date().toISOString(),
+    };
+
+    const res = await safeUpsertToSupabase('developer_profile', payload, 'id');
+    return res;
+  } catch (err: any) {
+    console.error('Error saving developer profile to Supabase:', err);
+    return { success: false, error: err?.message || 'Failed to save developer profile' };
   }
 }
 

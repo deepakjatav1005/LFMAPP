@@ -55,6 +55,9 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
     Page.BOOKING_RENT,
     Page.BUILDING_PERMISSION,
     Page.TAX_REPORT,
+    Page.MEMBER_CARD,
+    Page.OTHER_TAX,
+    Page.BUSINESS_REGISTRATION,
   ].includes(currentPage);
 
   const isCashbookPage = currentPage === Page.CASHBOOK_MANAGEMENT;
@@ -176,14 +179,14 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
           </button>
 
           {/* ITEM 3: TAX MANAGEMENT WITH SUBMENU (कर प्रबंधन - सब मेनू) */}
-          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 overflow-hidden">
+          <div className="rounded-xl border border-blue-200/80 bg-blue-50/40 overflow-hidden">
             <button
               onClick={() => {
                 setTaxSubmenuOpen(!taxSubmenuOpen);
                 if (!isTaxPage) handleNav(Page.BENEFICIARY_MANAGEMENT);
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-all duration-200 font-bold ${
-                isTaxPage ? 'bg-emerald-800 text-white shadow-sm' : 'text-emerald-950 hover:bg-emerald-100/70'
+                isTaxPage ? 'bg-primary text-white shadow-sm' : 'text-slate-900 hover:bg-blue-100/70'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -193,7 +196,7 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                     <p className="text-xs font-black tracking-tight uppercase truncate">
                       3- {isHindi ? 'कर प्रबंधन' : 'Tax Management'}
                     </p>
-                    <p className={`text-[10px] truncate ${isTaxPage ? 'text-emerald-100 font-medium' : 'text-emerald-700'}`}>
+                    <p className={`text-[10px] truncate ${isTaxPage ? 'text-blue-100 font-medium' : 'text-blue-700'}`}>
                       {isHindi ? 'कर दर, हितग्राही, मांग व रसीद' : 'Rates, Taxpayers, Bills & Receipts'}
                     </p>
                   </div>
@@ -206,16 +209,16 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
               )}
             </button>
 
-            {/* SUBMENU 3.1 - 3.6 */}
+            {/* SUBMENU 3.1 - 3.12 */}
             {(expanded && taxSubmenuOpen) && (
-              <div className="py-1.5 pl-6 pr-1.5 space-y-1 bg-white/80 border-t border-emerald-100">
+              <div className="py-1.5 pl-6 pr-1.5 space-y-1 bg-white/90 border-t border-blue-100">
                 {/* 3.1 Tax Rate Management */}
                 <button
                   onClick={() => handleNav(Page.MANAGE_TAX_RATES)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.MANAGE_TAX_RATES
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.1- {isHindi ? 'कर दर प्रबंधन' : 'Tax Rate Management'}</span>
@@ -226,13 +229,13 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.BENEFICIARY_MANAGEMENT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.BENEFICIARY_MANAGEMENT
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.2- {isHindi ? 'हितग्राही प्रबंधन' : 'Beneficiary Management'}</span>
                   {beneficiaryCount > 0 && (
-                    <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 text-[10px] font-black rounded-full">
+                    <span className="px-1.5 py-0.2 bg-blue-100 text-primary-900 text-[10px] font-black rounded-full">
                       {beneficiaryCount}
                     </span>
                   )}
@@ -243,8 +246,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.TAX_BENEFICIARY_LIST)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.TAX_BENEFICIARY_LIST
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.3- {isHindi ? 'कर हितग्राही सूची' : 'Tax Beneficiary List'}</span>
@@ -255,8 +258,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.TAX_ISSUE_MANAGEMENT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.TAX_ISSUE_MANAGEMENT
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.4- {isHindi ? 'कर मांग जारी' : 'Tax Demand'}</span>
@@ -272,8 +275,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.TAX_RECEIPT_MANAGEMENT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.TAX_RECEIPT_MANAGEMENT
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.5- {isHindi ? 'कर रसीद संग्रह' : 'Tax Receipts'}</span>
@@ -289,8 +292,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.DEMAND_NOTICE)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.DEMAND_NOTICE
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.6- {isHindi ? 'मांग सूचना पत्र' : 'Tax Demand Notice'}</span>
@@ -301,8 +304,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.BOOKING_RENT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.BOOKING_RENT
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.7- {isHindi ? 'बुकिंग / किराया वाउचर' : 'Booking & Rent'}</span>
@@ -313,8 +316,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.BUILDING_PERMISSION)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.BUILDING_PERMISSION
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.8- {isHindi ? 'भवन निर्माण अनुमति एवं कर' : 'Building Permission & Tax'}</span>
@@ -325,8 +328,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.TAX_REPORT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.TAX_REPORT
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.9- {isHindi ? 'कर रिपोर्ट एवं सारांश' : 'Tax Report & Summary'}</span>
@@ -337,26 +340,52 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.MEMBER_CARD)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     currentPage === Page.MEMBER_CARD
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-emerald-100/80 hover:text-emerald-900'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">3.10- {isHindi ? 'सदस्य पहचान पत्र (कार्ड)' : 'Member ID Card'}</span>
                   <span className="text-xs">🪪</span>
+                </button>
+
+                {/* 3.11 Other Tax Option */}
+                <button
+                  onClick={() => handleNav(Page.OTHER_TAX)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
+                    currentPage === Page.OTHER_TAX
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
+                  }`}
+                >
+                  <span className="truncate">3.11- {isHindi ? 'अन्य कर (Other Tax)' : 'Other Tax'}</span>
+                  <span className="text-xs">📜</span>
+                </button>
+
+                {/* 3.12 Commercial Shop & Business Registration Option */}
+                <button
+                  onClick={() => handleNav(Page.BUSINESS_REGISTRATION)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
+                    currentPage === Page.BUSINESS_REGISTRATION
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
+                  }`}
+                >
+                  <span className="truncate">3.12- {isHindi ? 'दुकान व संस्थान पंजीयन' : 'Shop & Business Reg.'}</span>
+                  <span className="text-xs">🏪</span>
                 </button>
               </div>
             )}
           </div>
 
           {/* ITEM 4: CASHBOOK MANAGEMENT WITH SUBMENU (कैशबुक प्रबंधन - सब मेनू) */}
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 overflow-hidden">
+          <div className="rounded-xl border border-blue-200/80 bg-blue-50/40 overflow-hidden">
             <button
               onClick={() => {
                 setCashbookSubmenuOpen(!cashbookSubmenuOpen);
                 if (!isCashbookPage) handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.CASHBOOK_REPORT);
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-all duration-200 font-bold ${
-                isCashbookPage ? 'bg-amber-900 text-white shadow-sm' : 'text-amber-950 hover:bg-amber-100/70'
+                isCashbookPage ? 'bg-primary text-white shadow-sm' : 'text-slate-900 hover:bg-blue-100/70'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -366,7 +395,7 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                     <p className="text-xs font-black tracking-tight uppercase truncate">
                       4- {isHindi ? 'कैशबुक प्रबंधन' : 'Cashbook Management'}
                     </p>
-                    <p className={`text-[10px] truncate ${isCashbookPage ? 'text-amber-100 font-medium' : 'text-amber-800'}`}>
+                    <p className={`text-[10px] truncate ${isCashbookPage ? 'text-blue-100 font-medium' : 'text-blue-700'}`}>
                       {isHindi ? 'खाता शीर्षक, वेंडर, वाउचर व रोकड़ बही' : 'Account Heads, Vendors & Cashbook'}
                     </p>
                   </div>
@@ -379,16 +408,16 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
               )}
             </button>
 
-            {/* SUBMENU 4.1 - 4.7 */}
+            {/* SUBMENU 4.1 - 4.8 */}
             {(expanded && cashbookSubmenuOpen) && (
-              <div className="py-1.5 pl-6 pr-1.5 space-y-1 bg-white/80 border-t border-amber-100">
+              <div className="py-1.5 pl-6 pr-1.5 space-y-1 bg-white/90 border-t border-blue-100">
                 {/* 4.1 Account Head Creation */}
                 <button
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.ACCOUNT_HEADS)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.ACCOUNT_HEADS
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.1- {isHindi ? 'खाता शीर्षक निर्माण' : 'Account Head Creation'}</span>
@@ -399,8 +428,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.VENDORS)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.VENDORS
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.2- {isHindi ? 'वेंडर प्रबंधन' : 'Vendor Management'}</span>
@@ -411,8 +440,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.WORKS)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.WORKS
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.3- {isHindi ? 'कार्य प्रबंधन' : 'Work Management'}</span>
@@ -423,8 +452,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.INCOME_VOUCHERS)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.INCOME_VOUCHERS
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.4- {isHindi ? 'आय वाउचर प्रविष्टि' : 'Income Voucher'}</span>
@@ -435,8 +464,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.EXPENDITURE_VOUCHERS)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.EXPENDITURE_VOUCHERS
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.5- {isHindi ? 'व्यय वाउचर प्रविष्टि' : 'Expenditure Voucher'}</span>
@@ -447,8 +476,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.LEDGER_REPORT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.LEDGER_REPORT
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.6- {isHindi ? 'खाता बही लेजर' : 'Ledger Report'}</span>
@@ -459,8 +488,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.CASHBOOK_REPORT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.CASHBOOK_REPORT
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.7- {isHindi ? 'रोकड़ बही रिपोर्ट' : 'Cashbook Report'}</span>
@@ -471,8 +500,8 @@ export const FlappedSidebar: React.FC<FlappedSidebarProps> = ({
                   onClick={() => handleNav(Page.CASHBOOK_MANAGEMENT, CashbookTab.WORK_EXPENDITURE_REPORT)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-bold transition-all ${
                     isCashbookPage && activeCashbookTab === CashbookTab.WORK_EXPENDITURE_REPORT
-                      ? 'bg-amber-800 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-amber-100/80 hover:text-amber-950'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-blue-50 hover:text-primary-800'
                   }`}
                 >
                   <span className="truncate">4.8- {isHindi ? 'कार्य व्यय व अभिसरण रिपोर्ट' : 'Work Expenditure Report'}</span>

@@ -3,6 +3,12 @@ import { Tax, Family, TaxType, TaxRates, TaxRatesLockInfo, BeneficiaryCategory, 
 import ViewHeader from './ViewHeader';
 import { formatDateDDMMYYYY, getCleanOfficeTitle } from '../utils/printUtils';
 import { exportBulkDemandBillsToPDF, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
 
 interface TaxIssueManagementViewProps {
   taxes: Tax[];
@@ -51,6 +57,10 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
   const [bulkBillMonth, setBulkBillMonth] = useState<number>(new Date().getMonth() + 1);
   const [bulkBillYear, setBulkBillYear] = useState<number>(new Date().getFullYear());
   const [bulkBillWard, setBulkBillWard] = useState<string>('ALL');
+
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
 
   // Single issue form state
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
@@ -183,6 +193,59 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
     }
   }, [lockedFamilies]);
 
+  const executeSingleTaxIssue = () => {
+    const family = families.find((f) => f.id === selectedFamilyId);
+    const billNo = `DEM-${selectedYear}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const monthName = months.find((m) => m.value === selectedMonth)?.name || `माह ${selectedMonth}`;
+
+    onIssueTax({
+      familyId: selectedFamilyId,
+      month: selectedMonth,
+      year: selectedYear,
+      type: selectedTaxType,
+      amount: Number(customAmount),
+      category: family?.category || BeneficiaryCategory.APL,
+      status: 'ISSUED',
+      billNo,
+    });
+
+    setSuccessModalInfo({
+      title: isHindi ? 'कर मांग पत्र जारी हुआ!' : 'Tax Demand Bill Issued Successfully!',
+      message: isHindi
+        ? `हितग्राही ${family?.name} ${family?.surname} हेतु ${monthName} ${selectedYear} का ${selectedTaxType} कर मांग पत्र सफलतापूर्वक जारी किया गया।`
+        : `Tax demand bill for ${family?.name} ${family?.surname} (${selectedTaxType}, ${monthName} ${selectedYear}) has been issued.`,
+      recordType: isHindi ? 'कर मांग पत्र (TAX DEMAND BILL)' : 'TAX DEMAND BILL',
+      details: [
+        { label: isHindi ? 'मांग पत्र क्रमांक' : 'Bill No', value: billNo },
+        { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: `${family?.name} ${family?.surname}` },
+        { label: isHindi ? 'कर मद' : 'Tax Type', value: selectedTaxType },
+        { label: isHindi ? 'अवधि / माह' : 'Period', value: `${monthName} ${selectedYear}` },
+        { label: isHindi ? 'मांग राशि' : 'Amount', value: `₹${customAmount}` },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        const createdTaxObj: Tax = {
+          id: `temp-${Date.now()}`,
+          familyId: selectedFamilyId,
+          type: selectedTaxType,
+          month: selectedMonth,
+          year: selectedYear,
+          amount: customAmount,
+          status: 'ISSUED',
+          billNo,
+          issueDate: new Date().toISOString().split('T')[0],
+        };
+        handlePrintSingleBill(createdTaxObj);
+      },
+      printButtonLabel: isHindi ? '📄 मांग पत्र प्रिंट करें' : 'Print Demand Bill',
+      onClose: () => {
+        setSuccessModalInfo(null);
+        setActiveTab('ISSUED_LIST');
+      },
+      isHindi,
+    });
+  };
+
   const handleChargeTaxSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -209,27 +272,72 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
         alert(isHindi ? 'कृपया पात्र हितग्राही का चयन करें।' : 'Please select a locked beneficiary profile.');
         return;
       }
-      const family = families.find(f => f.id === selectedFamilyId);
-      onIssueTax({
-        familyId: selectedFamilyId,
-        month: selectedMonth,
-        year: selectedYear,
-        type: selectedTaxType,
-        amount: Number(customAmount),
-        category: family?.category || BeneficiaryCategory.APL,
-        status: 'ISSUED',
-        billNo: `DEM-${selectedYear}-${Math.floor(1000 + Math.random() * 9000)}`,
-      });
 
-      setNotification(`Tax demand bill created for ${family?.name} ${family?.surname} for ${months.find(m => m.value === selectedMonth)?.name.split(' ')[0]} ${selectedYear}!`);
+      // Check if duplicate demand bill already exists for same family, type, month, and year
+      const existingBill = taxes.find(
+        (t) =>
+          t.familyId === selectedFamilyId &&
+          t.type === selectedTaxType &&
+          t.month === selectedMonth &&
+          t.year === selectedYear
+      );
+
+      if (existingBill) {
+        const family = families.find((f) => f.id === selectedFamilyId);
+        const monthName = months.find((m) => m.value === selectedMonth)?.name || `माह ${selectedMonth}`;
+        setDuplicateModalInfo({
+          title: isHindi ? 'समान कर मांग पत्र प्रविष्टि चेतावनी' : 'Duplicate Tax Demand Warning',
+          message: isHindi
+            ? `⚠️ इस हितग्राही (${family?.name} ${family?.surname}) हेतु ${monthName} ${selectedYear} का ${selectedTaxType} मांग पत्र पहले से दर्ज है!`
+            : `⚠️ A tax demand bill for ${family?.name} ${family?.surname} (${selectedTaxType}, ${monthName} ${selectedYear}) already exists!`,
+          duplicateInfo: [
+            { label: isHindi ? 'मांग पत्र क्र.' : 'Bill No', value: existingBill.billNo || existingBill.id },
+            { label: isHindi ? 'मांग राशि' : 'Amount', value: `₹${existingBill.amount}` },
+            { label: isHindi ? 'वर्तमान स्थिति' : 'Status', value: existingBill.status === 'PAID' ? 'भुगतान पूर्ण (PAID)' : 'लंबित (ISSUED/UNPAID)' },
+          ],
+          onConfirm: () => {
+            setDuplicateModalInfo(null);
+            executeSingleTaxIssue();
+          },
+          onCancel: () => {
+            setDuplicateModalInfo(null);
+          },
+          isHindi,
+        });
+        return;
+      }
+
+      executeSingleTaxIssue();
     } else {
       // Issue to ALL locked beneficiaries for selected month & tax type
+      const monthName = months.find((m) => m.value === selectedMonth)?.name || `माह ${selectedMonth}`;
       onBatchIssueTaxes(selectedMonth, selectedYear, [selectedTaxType]);
-      setNotification(`Successfully generated ${selectedTaxType} demand bills for ALL ${lockedFamilies.length} remaining beneficiaries for ${months.find(m => m.value === selectedMonth)?.name.split(' ')[0]} ${selectedYear}!`);
-    }
 
-    setTimeout(() => setNotification(null), 4000);
-    setActiveTab('ISSUED_LIST');
+      setSuccessModalInfo({
+        title: isHindi ? 'थोक कर मांग पत्र जारी हुए!' : 'Bulk Tax Demand Bills Issued!',
+        message: isHindi
+          ? `सफलतापूर्वक सभी ${lockedFamilies.length} पात्र हितग्राहियों हेतु ${selectedTaxType} (${monthName} ${selectedYear}) के मांग पत्र जारी कर दिए गए।`
+          : `Successfully generated ${selectedTaxType} demand bills for ${lockedFamilies.length} beneficiaries (${monthName} ${selectedYear}).`,
+        recordType: isHindi ? 'थोक मांग पत्र जारी' : 'BULK TAX DEMAND BILLS',
+        details: [
+          { label: isHindi ? 'कर मद' : 'Tax Type', value: selectedTaxType },
+          { label: isHindi ? 'माह / वर्ष' : 'Period', value: `${monthName} ${selectedYear}` },
+          { label: isHindi ? 'कुल हितग्राही' : 'Total Beneficiaries', value: `${lockedFamilies.length} परिवार` },
+        ],
+        onPrint: () => {
+          setSuccessModalInfo(null);
+          setBulkBillMonth(selectedMonth);
+          setBulkBillYear(selectedYear);
+          setIsBulkBillModalOpen(true);
+        },
+        printButtonLabel: isHindi ? '🖨️ थोक मांग पत्र PDF देखें' : 'View Bulk PDF',
+        onClose: () => {
+          setSuccessModalInfo(null);
+          setActiveTab('ISSUED_LIST');
+        },
+        isHindi,
+      });
+    }
   };
 
   const handleBatchIssueSubmit = (e: React.FormEvent) => {
@@ -246,11 +354,35 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
       return;
     }
 
+    const monthName = months.find((m) => m.value === batchMonth)?.name || `माह ${batchMonth}`;
     onBatchIssueTaxes(batchMonth, batchYear, selectedTypesForBatch);
     const count = families.length * selectedTypesForBatch.length;
-    setNotification(`Successfully generated ${count} category-wise tax demand bills for ${families.length} families!`);
-    setTimeout(() => setNotification(null), 4000);
-    setActiveTab('ISSUED_LIST');
+
+    setSuccessModalInfo({
+      title: isHindi ? 'थोक मांग पत्र सफलतापूर्वक जारी हुए!' : 'Bulk Demand Bills Generated!',
+      message: isHindi
+        ? `चयनित ${selectedTypesForBatch.length} कर मदों हेतु कुल ${count} कर मांग पत्र (${monthName} ${batchYear}) सफलतापूर्वक तैयार कर दिए गए।`
+        : `Successfully generated ${count} category-wise tax demand bills for ${families.length} families (${monthName} ${batchYear}).`,
+      recordType: isHindi ? 'बैच कर मांग प्रपत्र' : 'BATCH DEMAND GENERATION',
+      details: [
+        { label: isHindi ? 'चयनित कर मदें' : 'Selected Taxes', value: selectedTypesForBatch.join(', ') },
+        { label: isHindi ? 'अवधि / माह' : 'Period', value: `${monthName} ${batchYear}` },
+        { label: isHindi ? 'कुल जारी बिल संख्या' : 'Total Bills Generated', value: `${count} प्रपत्र` },
+        { label: isHindi ? 'कुल परिवार' : 'Families', value: `${families.length} परिवार` },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        setBulkBillMonth(batchMonth);
+        setBulkBillYear(batchYear);
+        setIsBulkBillModalOpen(true);
+      },
+      printButtonLabel: isHindi ? '🖨️ थोक मांग पत्र PDF देखें' : 'View Bulk PDF',
+      onClose: () => {
+        setSuccessModalInfo(null);
+        setActiveTab('ISSUED_LIST');
+      },
+      isHindi,
+    });
   };
 
   const handleToggleBatchTaxType = (type: TaxType) => {
@@ -522,7 +654,7 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
       ];
     });
 
-    exportToPDF(filename, title, subtitle, headers, rows, officeName);
+    exportToPDF(filename, title, subtitle, headers, rows, officeDetails, admin);
   };
 
   return (
@@ -1511,6 +1643,12 @@ export const TaxIssueManagementView: React.FC<TaxIssueManagementViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* DUPLICATE DEMAND WARNING MODAL */}
+      {duplicateModalInfo && <DuplicateWarningModal {...duplicateModalInfo} />}
+
+      {/* SUCCESS CONFIRMATION POPUP MODAL */}
+      {successModalInfo && <SuccessPopupModal {...successModalInfo} />}
     </div>
   );
 };

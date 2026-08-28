@@ -4,6 +4,12 @@ import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
 import { formatDateDDMMYYYY, triggerPrint, getCleanOfficeTitle } from '../utils/printUtils';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
 
 interface BuildingPermissionViewProps {
   permissionList: BuildingPermissionRecord[];
@@ -30,6 +36,8 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [selectedPermForPrint, setSelectedPermForPrint] = useState<BuildingPermissionRecord | null>(null);
+  const [deletingPerm, setDeletingPerm] = useState<BuildingPermissionRecord | null>(null);
+  const [isDeletingPerm, setIsDeletingPerm] = useState<boolean>(false);
 
   // Form State
   const [beneficiarySearch, setBeneficiarySearch] = useState<string>('');
@@ -45,6 +53,10 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
   const [remarks, setRemarks] = useState<string>('पंचायत अनुमोदन संकल्प अनुसार वैध।');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
 
   const calculatedTotalAmount = useMemo(() => {
     const cAmount = Number(chargeAmount) || 0;
@@ -91,29 +103,9 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFamily) {
-      alert(isHindi ? 'कृपया पंजीकृत हितग्राही का चयन करें।' : 'Please select a registered beneficiary.');
-      return;
-    }
-
-    // STRICT CHECK: Only ONE time voucher creation allowed for selected beneficiary
-    if (existingPermissionForSelected) {
-      alert(
-        isHindi
-          ? `⚠️ इस हितग्राही (${selectedFamily.name} ${selectedFamily.surname}) हेतु पहले से ही निर्माण अनुमति क्रमांक (${existingPermissionForSelected.permissionNo}) जारी है। नियमानुसार एक हितग्राही के लिए केवल एक बार ही निर्माण अनुमति एवं कर वाउचर जारी किया जा सकता है।`
-          : `⚠️ Building Permission (${existingPermissionForSelected.permissionNo}) has already been issued for this beneficiary. Only one-time permission is allowed.`
-      );
-      return;
-    }
-
+  const executeSavePermission = async () => {
+    if (!selectedFamily) return;
     const chargeNum = Number(chargeAmount);
-    if (isNaN(chargeNum) || chargeNum <= 0) {
-      alert(isHindi ? 'कृपया वैध निर्माण अनुमति शुल्क राशि दर्ज करें।' : 'Please enter a valid charge amount.');
-      return;
-    }
-
     // Default validity: 1 year from today
     const validDate = new Date();
     validDate.setFullYear(validDate.getFullYear() + 1);
@@ -143,12 +135,31 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
         remarks: remarks.trim() || undefined,
       });
 
-      setNotification(
-        isHindi
-          ? `✅ भवन निर्माण अनुमति एवं कर वाउचर सफलतापूर्वक स्वीकृत हुआ एवं कैशबुक में आय दर्ज हो गई!`
-          : `✅ Building Permission & Tax voucher generated and auto-synced with Cashbook Income!`
-      );
-      setTimeout(() => setNotification(null), 4000);
+      // Show Successful Popup Confirmation Modal
+      setSuccessModalInfo({
+        title: isHindi ? 'भवन निर्माण अनुमति सफलतापूर्वक स्वीकृत!' : 'Building Permission Approved Successfully!',
+        message: isHindi
+          ? `ग्राम पंचायत द्वारा भवन निर्माण अनुमति एवं कर वाउचर जारी कर दिया गया है एवं कैशबुक आय में सुरक्षित हो गया है।`
+          : `Building permission certificate & tax voucher issued and saved to Cashbook.`,
+        recordType: isHindi ? 'भवन निर्माण अनुमति' : 'BUILDING PERMISSION',
+        details: [
+          { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: `${selectedFamily.name} ${selectedFamily.surname}` },
+          { label: isHindi ? 'स्थान / वार्ड' : 'Location', value: locationAddress.trim() || `वार्ड क्र. ${selectedFamily.wardNo || '01'}` },
+          { label: isHindi ? 'निर्माण प्रकार' : 'Type', value: constructionType },
+          { label: isHindi ? 'कुल जमा शुल्क राशि' : 'Total Fee Paid', value: `₹${calculatedTotalAmount.toLocaleString('en-IN')}` },
+          { label: isHindi ? 'वैधता अवधि' : 'Valid Upto', value: formatDateDDMMYYYY(validUptoStr) },
+        ],
+        printButtonLabel: isHindi ? '🖨️ प्रमाण पत्र एवं रसीद प्रिंट करें' : 'Print Certificate & Receipt',
+        onPrint: () => {
+          if (created) {
+            setSelectedPermForPrint(created as BuildingPermissionRecord);
+          }
+        },
+        onClose: () => {
+          setSuccessModalInfo(null);
+        },
+        isHindi,
+      });
 
       // Reset form
       setSelectedFamilyId('');
@@ -158,15 +169,53 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
       setSanitationFee('');
       setTransactionId('');
       setActiveTab('LIST');
-      if (created) {
-        setSelectedPermForPrint(created as BuildingPermissionRecord);
-      }
     } catch (err) {
       console.error('Error creating building permission:', err);
       alert(isHindi ? 'भवन निर्माण अनुमति दर्ज करने में त्रुटि हुई।' : 'Error creating building permission.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFamily) {
+      alert(isHindi ? 'कृपया पंजीकृत हितग्राही का चयन करें।' : 'Please select a registered beneficiary.');
+      return;
+    }
+
+    const chargeNum = Number(chargeAmount);
+    if (isNaN(chargeNum) || chargeNum <= 0) {
+      alert(isHindi ? 'कृपया वैध निर्माण अनुमति शुल्क राशि दर्ज करें।' : 'Please enter a valid charge amount.');
+      return;
+    }
+
+    // CHECK: Existing permission for selected beneficiary
+    if (existingPermissionForSelected) {
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान निर्माण अनुमति प्रविष्टि चेतावनी (Duplicate Permission Warning)' : 'Duplicate Permission Warning',
+        message: isHindi
+          ? `चेतावनी: इस हितग्राही (${selectedFamily.name} ${selectedFamily.surname}) हेतु पहले से ही निर्माण अनुमति क्रमांक (${existingPermissionForSelected.permissionNo}) दिनांक ${formatDateDDMMYYYY(existingPermissionForSelected.createdAt || existingPermissionForSelected.validUpto)} को जारी है। क्या आप फिर भी नई निर्माण अनुमति प्रविष्टि करना चाहते हैं?`
+          : `Warning: Building Permission (${existingPermissionForSelected.permissionNo}) has already been issued for this beneficiary. Do you want to proceed anyway?`,
+        duplicateInfo: [
+          { label: isHindi ? 'मौजूदा अनुमति क्र.' : 'Existing Permission No', value: existingPermissionForSelected.permissionNo },
+          { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: existingPermissionForSelected.beneficiaryName },
+          { label: isHindi ? 'स्थान / वार्ड' : 'Location', value: existingPermissionForSelected.locationAddress },
+          { label: isHindi ? 'पूर्व जमा शुल्क' : 'Previous Fee', value: `₹${existingPermissionForSelected.totalAmount.toLocaleString('en-IN')}` },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executeSavePermission();
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
+
+    executeSavePermission();
   };
 
   // Filtered permission records
@@ -558,11 +607,8 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
 
                       {onDeletePermission && (
                         <button
-                          onClick={() => {
-                            if (confirm(isHindi ? `क्या आप निर्माण अनुमति ${p.permissionNo} को हटाना चाहते हैं?` : `Delete permission ${p.permissionNo}?`)) {
-                              onDeletePermission(p.id);
-                            }
-                          }}
+                          type="button"
+                          onClick={() => setDeletingPerm(p)}
                           className="px-2 py-1 text-xs font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors cursor-pointer"
                           title={isHindi ? 'हटाएं' : 'Delete'}
                         >
@@ -1095,6 +1141,101 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* IN-APP DELETE CONFIRMATION MODAL */}
+      {deletingPerm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-rose-200 animate-scale-in">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+              🗑️
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black text-slate-900">
+                {isHindi ? 'भवन निर्माण अनुमति हटाएं?' : 'Delete Building Permission?'}
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {isHindi ? (
+                  <>
+                    क्या आप निर्माण अनुमति क्र. <span className="font-mono font-bold text-emerald-800">{deletingPerm.permissionNo}</span> (हितग्राही: <strong>{deletingPerm.beneficiaryName}</strong>) को स्थायी रूप से हटाना चाहते हैं?
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to delete building permission <span className="font-mono font-bold">{deletingPerm.permissionNo}</span> for <strong>{deletingPerm.beneficiaryName}</strong>?
+                  </>
+                )}
+              </p>
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 text-left font-medium">
+                ⚠️ {isHindi ? 'नोट: यह रिकॉर्ड एवं संबंधित कैशबुक आय प्रविष्टि दोनों हटा दी जाएंगी।' : 'Note: Record and associated cashbook voucher will be deleted.'}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingPerm}
+                onClick={() => setDeletingPerm(null)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                {isHindi ? 'रद्द करें (Cancel)' : 'Cancel'}
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeletingPerm}
+                onClick={async () => {
+                  if (!deletingPerm) return;
+                  const idToDelete = deletingPerm.id;
+                  try {
+                    setIsDeletingPerm(true);
+                    if (selectedPermForPrint?.id === idToDelete) {
+                      setSelectedPermForPrint(null);
+                    }
+                    if (onDeletePermission) {
+                      await onDeletePermission(idToDelete);
+                    }
+                  } finally {
+                    setIsDeletingPerm(false);
+                    setDeletingPerm(null);
+                  }
+                }}
+                className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-lg transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <span>🗑️</span>
+                <span>{isDeletingPerm ? 'हटाया जा रहा है...' : (isHindi ? 'हाँ, हटाएं' : 'Delete Now')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Warning Modal with User Confirmation */}
+      {duplicateModalInfo && (
+        <DuplicateWarningModal
+          isOpen={true}
+          title={duplicateModalInfo.title}
+          message={duplicateModalInfo.message}
+          duplicateInfo={duplicateModalInfo.duplicateInfo}
+          onConfirm={duplicateModalInfo.onConfirm}
+          onCancel={duplicateModalInfo.onCancel}
+          isHindi={isHindi}
+        />
+      )}
+
+      {/* Success Popup Modal */}
+      {successModalInfo && (
+        <SuccessPopupModal
+          isOpen={true}
+          title={successModalInfo.title}
+          message={successModalInfo.message}
+          recordType={successModalInfo.recordType}
+          details={successModalInfo.details}
+          printButtonLabel={successModalInfo.printButtonLabel}
+          onPrint={successModalInfo.onPrint}
+          onClose={successModalInfo.onClose}
+          isHindi={isHindi}
+        />
       )}
     </div>
   );

@@ -4,6 +4,12 @@ import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
 import { triggerPrint, getCleanOfficeTitle, formatDateDDMMYYYY } from '../utils/printUtils';
 import { exportBulkVouchersToPDF, exportToExcel } from '../utils/exportUtils';
+import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
 
 interface TaxReceiptManagementViewProps {
   payments: Payment[];
@@ -65,6 +71,10 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ id: string; receiptNo: string } | null>(null);
   const [selectedDemandTaxId, setSelectedDemandTaxId] = useState<string>('ALL');
+
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
 
   // Bulk Voucher Download State
   const [showBulkVoucherModal, setShowBulkVoucherModal] = useState<boolean>(false);
@@ -325,30 +335,7 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
     );
   });
 
-  const handleCollectPayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (!selectedFamilyId) {
-      setErrorMsg(isHindi ? '⚠️ कृपया हितग्राही चुनें!' : '⚠️ Please select a beneficiary!');
-      return;
-    }
-
-    if (paymentAmount <= 0 && netPayable > 0) {
-      setErrorMsg(isHindi ? '⚠️ कृपया वैध भुगतान राशि दर्ज करें!' : '⚠️ Please enter a valid payment amount!');
-      return;
-    }
-
-    // STRICT OVER-PAYMENT VALIDATION RULE
-    if (paymentAmount > netPayable) {
-      setErrorMsg(
-        isHindi
-          ? `⚠️ भुगतान राशि (₹${paymentAmount}) कुल देय राशि (₹${netPayable}) से अधिक नहीं हो सकती! कृपया राशि कम करें।`
-          : `⚠️ Payment amount (₹${paymentAmount}) cannot exceed net payable amount (₹${netPayable})!`
-      );
-      return;
-    }
-
+  const executePaymentCollection = () => {
     // Determine charged and received month & year
     const pParts = paymentDate.split('-');
     const recMonthNum = parseInt(pParts[1], 10) || (new Date().getMonth() + 1);
@@ -385,12 +372,14 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
       chargedMonthNames = `${recMonthHindi} ${recYearNum}`;
     }
 
+    const effectiveTaxType = selectedTaxType === 'ALL' ? (chosenSpecificTax ? chosenSpecificTax.type : undefined) : selectedTaxType;
+
     onAddPayment(
       selectedFamilyId,
       Number(paymentAmount),
       paymentMode,
       remarks,
-      selectedTaxType === 'ALL' ? (chosenSpecificTax ? chosenSpecificTax.type : undefined) : selectedTaxType,
+      effectiveTaxType,
       paymentDate,
       paidTaxIds,
       totalChargedForFamily,
@@ -406,6 +395,56 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
       receivedMonthNames
     );
 
+    const receiptNoDisplay = `REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    setSuccessModalInfo({
+      title: isHindi ? 'कर रसीद सफलतापूर्वक काटी गई!' : 'Tax Receipt Generated Successfully!',
+      message: isHindi
+        ? `हितग्राही ${selectedFamily?.name} ${selectedFamily?.surname} से ₹${paymentAmount} का कर भुगतान सफलतापूर्वक दर्ज कर लिया गया है। कैशबुक में आय प्रविष्टि स्वतः दर्ज हो गई है।`
+        : `Tax payment of ₹${paymentAmount} from ${selectedFamily?.name} ${selectedFamily?.surname} has been saved and synced with Cashbook.`,
+      recordType: isHindi ? 'कर वसूली रसीद (TAX RECEIPT)' : 'TAX COLLECTION RECEIPT',
+      details: [
+        { label: isHindi ? 'रसीद दिनांक' : 'Receipt Date', value: formatDateDDMMYYYY(paymentDate) },
+        { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: `${selectedFamily?.name} ${selectedFamily?.surname}` },
+        { label: isHindi ? 'प्राप्त राशि' : 'Paid Amount', value: `₹${paymentAmount}` },
+        { label: isHindi ? 'भुगतान माध्यम' : 'Payment Mode', value: paymentMode },
+        { label: isHindi ? 'कर मद / अवधि' : 'Tax / Period', value: chargedMonthNames || '-' },
+        { label: isHindi ? 'शेष बकाया' : 'Remaining Dues', value: `₹${remainingDues}` },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        // Find or create receipt object to print
+        const newPaymentObj: Payment = {
+          id: `temp-${Date.now()}`,
+          receiptNo: receiptNoDisplay,
+          familyId: selectedFamilyId,
+          amount: Number(paymentAmount),
+          mode: paymentMode,
+          date: paymentDate,
+          remarks,
+          taxType: effectiveTaxType,
+          paidTaxIds,
+          chargedAmount: totalChargedForFamily,
+          previousDues,
+          penalty: Number(penaltyAmount || 0),
+          concession: Number(concessionAmount || 0),
+          remainingDues,
+          chargedMonth,
+          chargedYear,
+          chargedMonthNames,
+          receivedMonth: recMonthNum,
+          receivedYear: recYearNum,
+          receivedMonthNames,
+        };
+        setViewingReceipt(newPaymentObj);
+      },
+      printButtonLabel: isHindi ? '🖨️ रसीद देखें / प्रिंट करें' : 'View / Print Receipt',
+      onClose: () => {
+        setSuccessModalInfo(null);
+      },
+      isHindi,
+    });
+
     setSuccessMsg(
       isHindi
         ? `🎉 कर रसीद सफलतापूर्वक काटी गई! मांग माह: ${chargedMonthNames} | प्राप्ति माह: ${receivedMonthNames} (प्राप्त राशि: ₹${paymentAmount})`
@@ -416,6 +455,65 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
     // Reset form fields
     setPenaltyAmount(0);
     setConcessionAmount(0);
+  };
+
+  const handleCollectPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (!selectedFamilyId) {
+      setErrorMsg(isHindi ? '⚠️ कृपया हितग्राही चुनें!' : '⚠️ Please select a beneficiary!');
+      return;
+    }
+
+    if (paymentAmount <= 0 && netPayable > 0) {
+      setErrorMsg(isHindi ? '⚠️ कृपया वैध भुगतान राशि दर्ज करें!' : '⚠️ Please enter a valid payment amount!');
+      return;
+    }
+
+    // STRICT OVER-PAYMENT VALIDATION RULE
+    if (paymentAmount > netPayable) {
+      setErrorMsg(
+        isHindi
+          ? `⚠️ भुगतान राशि (₹${paymentAmount}) कुल देय राशि (₹${netPayable}) से अधिक नहीं हो सकती! कृपया राशि कम करें।`
+          : `⚠️ Payment amount (₹${paymentAmount}) cannot exceed net payable amount (₹${netPayable})!`
+      );
+      return;
+    }
+
+    // Check duplicate payment on the exact same date for the same family with the same amount
+    const duplicatePayment = payments.find(
+      (p) =>
+        p.familyId === selectedFamilyId &&
+        p.date === paymentDate &&
+        Math.abs(p.amount - Number(paymentAmount)) < 0.01
+    );
+
+    if (duplicatePayment) {
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान कर रसीद प्रविष्टि चेतावनी' : 'Duplicate Tax Receipt Warning',
+        message: isHindi
+          ? `⚠️ इस हितग्राही (${selectedFamily?.name} ${selectedFamily?.surname}) हेतु आज के दिनांक (${formatDateDDMMYYYY(paymentDate)}) पर ₹${paymentAmount} की कर रसीद पहले से काटी जा चुकी है!`
+          : `⚠️ A tax receipt of ₹${paymentAmount} has already been issued for ${selectedFamily?.name} ${selectedFamily?.surname} on ${formatDateDDMMYYYY(paymentDate)}!`,
+        duplicateInfo: [
+          { label: isHindi ? 'रसीद क्रमांक' : 'Receipt No', value: duplicatePayment.receiptNo || duplicatePayment.id },
+          { label: isHindi ? 'रसीद दिनांक' : 'Date', value: formatDateDDMMYYYY(duplicatePayment.date) },
+          { label: isHindi ? 'प्राप्त राशि' : 'Amount', value: `₹${duplicatePayment.amount}` },
+          { label: isHindi ? 'भुगतान माध्यम' : 'Mode', value: duplicatePayment.mode },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executePaymentCollection();
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
+
+    executePaymentCollection();
   };
 
   const filteredPayments = payments.filter((p) => {
@@ -850,7 +948,6 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
                   officeDetails={officeDetails}
                   adminPanchayat={admin?.gramPanchayat}
                   voucherTitle="कराधान एवं ई-राजस्व संग्रह पावती (OFFICIAL TAX RECEIPT VOUCHER)"
-                  voucherSubTitle="मध्य प्रदेश पंचायत राज एवं ग्राम स्वराज अधिनियम (अधिरोपित कर वसूली पावती)"
                   badgeBgColor="bg-emerald-50 text-emerald-950 border-emerald-300"
                 />
 
@@ -882,23 +979,38 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
 
                 {(() => {
                   const fam = families.find((f) => f.id === viewingReceipt.familyId);
+                  const guardian = fam?.guardianName || (fam as any)?.fatherHusbandName || '-';
                   return (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
-                      <p>
-                        <strong className="text-slate-700 w-28 inline-block">Beneficiary Head:</strong>{' '}
-                        <span className="font-bold text-slate-900">{fam ? `${fam.name} ${fam.surname}` : 'N/A'}</span>
-                      </p>
-                      <p>
-                        <strong className="text-slate-700 w-28 inline-block">Category (श्रेणी):</strong>{' '}
-                        <span className="font-bold text-amber-800">{fam?.category || 'APL'}</span>
-                      </p>
-                      <p>
-                        <strong className="text-slate-700 w-28 inline-block">Samagra ID:</strong>{' '}
-                        <span className="font-mono font-semibold">{fam?.samagraId}</span> | Family ID: <span className="font-mono">{fam?.familyId || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <strong className="text-slate-700 w-28 inline-block">Ward & Muhalla:</strong> Ward {fam?.wardNo || '01'}, {fam?.muhalla || 'N/A'}
-                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-800">
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">Beneficiary Head:</strong>{' '}
+                          <span className="font-bold text-slate-900">{fam ? `${fam.name} ${fam.surname}` : 'N/A'}</span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">पिता/पति (Father/Husband):</strong>{' '}
+                          <span className="font-bold text-slate-900">{guardian}</span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">Category (श्रेणी):</strong>{' '}
+                          <span className="font-bold text-amber-800">{fam?.category || 'APL'}</span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">मोबाइल (Mobile):</strong>{' '}
+                          <span className="font-mono">{fam?.mobile || 'N/A'}</span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">Samagra ID:</strong>{' '}
+                          <span className="font-mono font-semibold">{fam?.samagraId || 'N/A'}</span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-700 w-32 inline-block">Family ID:</strong>{' '}
+                          <span className="font-mono">{fam?.familyId || 'N/A'}</span>
+                        </p>
+                        <p className="sm:col-span-2">
+                          <strong className="text-slate-700 w-32 inline-block">Ward & Muhalla:</strong> Ward {fam?.wardNo || '01'}, {fam?.muhalla || 'N/A'}
+                        </p>
+                      </div>
                     </div>
                   );
                 })()}
@@ -1707,6 +1819,12 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
           </div>
         </div>
       )}
+
+      {/* DUPLICATE TAX RECEIPT WARNING MODAL */}
+      {duplicateModalInfo && <DuplicateWarningModal {...duplicateModalInfo} />}
+
+      {/* SUCCESS CONFIRMATION POPUP MODAL */}
+      {successModalInfo && <SuccessPopupModal {...successModalInfo} />}
     </div>
   );
 };

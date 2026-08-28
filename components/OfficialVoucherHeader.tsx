@@ -1,10 +1,11 @@
 import React from 'react';
 import { OfficeDetails } from '../types';
-import { getCleanOfficeTitle, getOfficeLogoUrl, getCleanOfficeSubtitle } from '../utils/printUtils';
+import { getCleanOfficeTitle, getOfficeLogoUrl, getCleanOfficeSubtitle, DEFAULT_OFFICE_LOGO } from '../utils/printUtils';
 
 interface OfficialVoucherHeaderProps {
   officeDetails?: Partial<OfficeDetails> | null;
   adminPanchayat?: string;
+  admin?: any;
   voucherTitle: string;
   voucherSubTitle?: string;
   className?: string;
@@ -14,27 +15,28 @@ interface OfficialVoucherHeaderProps {
 export const OfficialVoucherHeader: React.FC<OfficialVoucherHeaderProps> = ({
   officeDetails,
   adminPanchayat,
+  admin,
   voucherTitle,
   voucherSubTitle,
   className = '',
   badgeBgColor = 'bg-slate-100 text-slate-900 border-slate-300',
 }) => {
   const logoUrl = getOfficeLogoUrl(officeDetails);
-  const officeName = getCleanOfficeTitle(officeDetails, adminPanchayat);
-  const officeSubtitle = getCleanOfficeSubtitle(officeDetails, { gramPanchayat: adminPanchayat });
+  const officeName = getCleanOfficeTitle(officeDetails, adminPanchayat || admin?.gramPanchayat);
+  const officeSubtitle = getCleanOfficeSubtitle(officeDetails, admin || { gramPanchayat: adminPanchayat });
 
   return (
     <div className={`text-center border-b-2 border-slate-900 pb-4 space-y-1.5 ${className}`}>
       {/* Official Government / Panchayat Logo */}
-      <div className="flex justify-center mb-1">
+      <div className="flex justify-center items-center gap-3 mb-2">
         <img
           src={logoUrl}
           alt="Official Logo"
-          className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-xs"
+          referrerPolicy="no-referrer"
+          className="w-24 h-24 sm:w-28 sm:h-28 print:w-24 print:h-24 object-contain drop-shadow-md"
           onError={(e) => {
-            // Fallback to default state emblem if custom URL fails to load
-            (e.currentTarget as HTMLImageElement).src =
-              'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Emblem_of_Madhya_Pradesh.svg/180px-Emblem_of_Madhya_Pradesh.svg.png';
+            // Fallback to embedded official emblem if custom URL fails to load
+            (e.currentTarget as HTMLImageElement).src = DEFAULT_OFFICE_LOGO;
           }}
         />
       </div>
@@ -45,7 +47,7 @@ export const OfficialVoucherHeader: React.FC<OfficialVoucherHeaderProps> = ({
       </h2>
 
       {/* Address / Block / District / State */}
-      <p className="text-xs text-slate-700 font-semibold max-w-xl mx-auto">
+      <p className="text-xs sm:text-sm text-slate-700 font-semibold max-w-xl mx-auto">
         {officeSubtitle}
       </p>
 

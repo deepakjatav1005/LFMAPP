@@ -1,7 +1,27 @@
 import React, { useState, useMemo } from 'react';
-import { AccountHead, Vendor, Work, CashbookVoucher, OfficeDetails, CashbookTab, Family, Payment, ExpenseSubHead } from '../types';
+import {
+  AccountHead,
+  Vendor,
+  Work,
+  CashbookVoucher,
+  OfficeDetails,
+  CashbookTab,
+  Family,
+  Payment,
+  ExpenseSubHead,
+  OtherTaxReceiptRecord,
+  BookingRentRecord,
+  BuildingPermissionRecord,
+  BusinessRegistrationRecord,
+} from '../types';
 import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
+import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
 import { triggerPrint, getCleanOfficeTitle, isInFinancialYear, formatDateDDMMYYYY } from '../utils/printUtils';
 
 interface CashbookManagementViewProps {
@@ -11,6 +31,11 @@ interface CashbookManagementViewProps {
   vouchers: CashbookVoucher[];
   families?: Family[];
   payments?: Payment[];
+  otherTaxReceipts?: OtherTaxReceiptRecord[];
+  bookingRents?: BookingRentRecord[];
+  buildingPermissions?: BuildingPermissionRecord[];
+  businessRegistrations?: BusinessRegistrationRecord[];
+  onSyncTaxTransactions?: () => void;
   subHeads?: ExpenseSubHead[];
   officeDetails?: OfficeDetails;
   isHindi?: boolean;
@@ -38,6 +63,11 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
   vouchers = [],
   families = [],
   payments = [],
+  otherTaxReceipts = [],
+  bookingRents = [],
+  buildingPermissions = [],
+  businessRegistrations = [],
+  onSyncTaxTransactions,
   subHeads = [],
   officeDetails = { officeName: 'कार्यालय ग्राम पंचायत', secretaryName: '', sarpanchName: '', districtName: '', janpadPanchayat: '' },
   isHindi = true,
@@ -78,24 +108,150 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
   const [subHeadParentHeadId, setSubHeadParentHeadId] = useState('');
   const [subHeadDescInput, setSubHeadDescInput] = useState('');
 
-  // --- TAX PAYER DETAILS HELPER FOR CASHBOOK ENTRIES ---
+  // --- TAX PAYER / BENEFICIARY DETAILS HELPER FOR CASHBOOK ENTRIES ---
   const getTaxPayerDetails = (v: CashbookVoucher) => {
-    if (!payments || !families) return null;
-    let pay = payments.find((p) => `vouch-tax-${p.id}` === v.id || (p.receiptNo && v.voucherNo.includes(p.receiptNo)));
-    if (!pay && v.remarks) {
-      pay = payments.find((p) => p.receiptNo && v.remarks.includes(p.receiptNo));
+    // 1. Regular Tax Payments (Property, Water, Cleanliness, Light, etc.)
+    if (payments && payments.length > 0) {
+      let pay = payments.find(
+        (p) =>
+          `vouch-tax-${p.id}` === v.id ||
+          (p.receiptNo && v.voucherNo === `INC-${p.receiptNo}`) ||
+          (p.receiptNo && v.voucherNo.includes(p.receiptNo))
+      );
+      if (!pay && v.remarks) {
+        pay = payments.find((p) => p.receiptNo && v.remarks.includes(p.receiptNo));
+      }
+      if (pay) {
+        const family = families.find(
+          (f) =>
+            f.id === pay?.familyId ||
+            (f.familyId && f.familyId === pay?.familyId) ||
+            (f.samagraId && f.samagraId === pay?.familyId)
+        );
+        return {
+          name: family ? `${family.name} ${family.surname}` : pay.familyId || 'करदाता',
+          guardianName: family?.guardianName || 'N/A',
+          samagraId: family?.samagraId || 'N/A',
+          familyId: family?.familyId || family?.id || pay.familyId,
+          wardNo: family?.wardNo || 'N/A',
+          receiptNo: pay.receiptNo,
+          taxType: pay.taxType || 'कर संग्रह',
+        };
+      }
     }
-    if (!pay) return null;
-    const family = families.find((f) => f.id === pay?.familyId);
-    if (!family) return null;
-    return {
-      name: `${family.name} ${family.surname}`,
-      guardianName: family.guardianName || 'N/A',
-      samagraId: family.samagraId || 'N/A',
-      familyId: family.familyId || family.id,
-      wardNo: family.wardNo || 'N/A',
-      receiptNo: pay.receiptNo,
-    };
+
+    // 2. Other Tax Receipts (3.11)
+    if (otherTaxReceipts && otherTaxReceipts.length > 0) {
+      let rec = otherTaxReceipts.find(
+        (r) =>
+          `vouch-othertax-${r.id}` === v.id ||
+          (r.receiptNo && v.voucherNo === `INC-${r.receiptNo}`) ||
+          (r.receiptNo && v.voucherNo.includes(r.receiptNo))
+      );
+      if (!rec && v.remarks) {
+        rec = otherTaxReceipts.find((r) => r.receiptNo && v.remarks.includes(r.receiptNo));
+      }
+      if (rec) {
+        return {
+          name: rec.beneficiaryName,
+          guardianName: rec.guardianName || 'N/A',
+          samagraId: rec.samagraId || rec.contactNo || 'N/A',
+          familyId: rec.receiptNo,
+          wardNo: rec.wardNo || 'N/A',
+          receiptNo: rec.receiptNo,
+          taxType: rec.taxHead || 'अन्य कर',
+        };
+      }
+    }
+
+    // 3. Premises / Hall Booking Rents (3.10)
+    if (bookingRents && bookingRents.length > 0) {
+      let b = bookingRents.find(
+        (bk) =>
+          `vouch-book-${bk.id}` === v.id ||
+          (bk.voucherNo && v.voucherNo.includes(bk.voucherNo))
+      );
+      if (!b && v.remarks) {
+        b = bookingRents.find((bk) => bk.voucherNo && v.remarks.includes(bk.voucherNo));
+      }
+      if (b) {
+        return {
+          name: b.beneficiaryName,
+          guardianName: b.contactNo || 'N/A',
+          samagraId: b.purpose || 'N/A',
+          familyId: b.voucherNo,
+          wardNo: 'N/A',
+          receiptNo: b.voucherNo,
+          taxType: 'परिसर/भवन किराया',
+        };
+      }
+    }
+
+    // 4. Building Permissions (3.9)
+    if (buildingPermissions && buildingPermissions.length > 0) {
+      let p = buildingPermissions.find(
+        (perm) =>
+          `vouch-bld-${perm.id}` === v.id ||
+          (perm.voucherNo && v.voucherNo.includes(perm.voucherNo)) ||
+          (perm.permissionNo && v.remarks.includes(perm.permissionNo))
+      );
+      if (!p && v.remarks) {
+        p = buildingPermissions.find((perm) => perm.permissionNo && v.remarks.includes(perm.permissionNo));
+      }
+      if (p) {
+        return {
+          name: p.beneficiaryName,
+          guardianName: p.guardianName || 'N/A',
+          samagraId: p.permissionNo,
+          familyId: p.permissionNo,
+          wardNo: p.wardNo || 'N/A',
+          receiptNo: p.permissionNo,
+          taxType: 'भवन निर्माण अनुमति शुल्क',
+        };
+      }
+    }
+
+    // 5. Business / Shop Registrations (3.12)
+    if (businessRegistrations && businessRegistrations.length > 0) {
+      let biz = businessRegistrations.find(
+        (b) =>
+          `vouch-biz-${b.id}` === v.id ||
+          (b.certificateNo && v.voucherNo.includes(b.certificateNo)) ||
+          (b.certificateNo && v.remarks.includes(b.certificateNo))
+      );
+      if (biz) {
+        return {
+          name: `${biz.firmName} (${biz.ownerName})`,
+          guardianName: biz.mobileNo || 'N/A',
+          samagraId: biz.certificateNo,
+          familyId: biz.certificateNo,
+          wardNo: biz.wardNo || 'N/A',
+          receiptNo: biz.certificateNo,
+          taxType: 'दुकान पंजीयन / व्यवसाय कर',
+        };
+      }
+    }
+
+    // 6. Text extraction from v.remarks as fallback
+    if (v.remarks) {
+      const taxPayerMatch = v.remarks.match(/करदाता:\s*([^|\]]+)/);
+      const guardianMatch = v.remarks.match(/पिता\/पति:\s*([^|\]]+)/);
+      const samagraMatch = v.remarks.match(/(?:सदस्य\/समग्र ID|सदस्य ID):\s*([^|\]\)]+)/);
+      const receiptMatch = v.remarks.match(/(?:रसीद क्र\.|रसीद:|रसीद):\s*([^|\s\]\)]+)/);
+      if (taxPayerMatch || receiptMatch) {
+        return {
+          name: taxPayerMatch ? taxPayerMatch[1].trim() : 'करदाता',
+          guardianName: guardianMatch ? guardianMatch[1].trim() : 'N/A',
+          samagraId: samagraMatch ? samagraMatch[1].trim() : 'N/A',
+          familyId: 'N/A',
+          wardNo: 'N/A',
+          receiptNo: receiptMatch ? receiptMatch[1].trim() : v.voucherNo,
+          taxType: 'कर संग्रह',
+        };
+      }
+    }
+
+    return null;
   };
 
   // --- ACCOUNT HEAD FORM STATES ---
@@ -134,6 +290,11 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
   const [vWorkId, setVWorkId] = useState('');
   const [vPaymentMode, setVPaymentMode] = useState<'CASH' | 'BANK' | 'UPI' | 'CHEQUE'>('BANK');
   const [vRemarks, setVRemarks] = useState('');
+  const [vProposalNo, setVProposalNo] = useState('');
+  const [vProposalDate, setVProposalDate] = useState('');
+  const [vBillNo, setVBillNo] = useState('');
+  const [vBillDate, setVBillDate] = useState('');
+  const [vExpenseCategory, setVExpenseCategory] = useState<'WORK' | 'OFFICE' | 'GENERAL'>('WORK');
 
   // --- REPORT FILTER STATES ---
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -148,6 +309,10 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
   const [viewingVoucherSlip, setViewingVoucherSlip] = useState<CashbookVoucher | null>(null);
   const [viewingNoteSheet, setViewingNoteSheet] = useState<CashbookVoucher | null>(null);
   const [viewingWorkVouchersModal, setViewingWorkVouchersModal] = useState<Work | null>(null);
+
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
 
   const monthList = [
     { value: 1, name: isHindi ? '01 - जनवरी' : '01 - January' },
@@ -451,6 +616,63 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
     setEditingWorkModal(null);
   };
 
+  const executeAddIncomeVoucher = (amountNum: number) => {
+    const selectedHead = accountHeads.find((h) => h.id === vHeadId);
+    const voucherDate = vDate;
+    const paymentMode = 'BANK';
+    const remarksText = vRemarks.trim() || (isHindi ? 'आय प्राप्ति जमा' : 'Income Receipt');
+
+    const newVoucherObj = onAddVoucher({
+      voucherType: 'INCOME',
+      date: voucherDate,
+      headId: vHeadId,
+      subHeadName: undefined,
+      amount: amountNum,
+      paymentMode: 'BANK',
+      remarks: remarksText,
+    });
+
+    const displayVoucher: CashbookVoucher = newVoucherObj || {
+      id: `vouch-inc-${Date.now()}`,
+      voucherNo: `INC-${new Date().getFullYear()}-001`,
+      voucherType: 'INCOME',
+      date: voucherDate,
+      headId: vHeadId,
+      subHeadName: undefined,
+      amount: amountNum,
+      paymentMode: 'BANK',
+      remarks: remarksText,
+    };
+
+    setSuccessModalInfo({
+      title: isHindi ? 'रोकड़बही में आय प्रविष्टि दर्ज हुई!' : 'Income Voucher Saved Successfully!',
+      message: isHindi
+        ? `खाता शीर्षक "${selectedHead?.name || 'आय खाता'}" में ₹${amountNum.toLocaleString('en-IN')} की आय प्रविष्टि सफलतापूर्वक दर्ज कर दी गई है।`
+        : `Income voucher of ₹${amountNum.toLocaleString('en-IN')} saved under "${selectedHead?.name || 'Income Head'}".`,
+      recordType: isHindi ? 'रोकड़बही आय वाउचर (CASHBOOK INCOME)' : 'INCOME VOUCHER',
+      details: [
+        { label: isHindi ? 'वाउचर दिनांक' : 'Date', value: formatDateDDMMYYYY(voucherDate) },
+        { label: isHindi ? 'खाता शीर्षक' : 'Account Head', value: selectedHead?.name || '-' },
+        { label: isHindi ? 'प्राप्त राशि' : 'Amount', value: `₹${amountNum.toLocaleString('en-IN')}` },
+        { label: isHindi ? 'माध्यम' : 'Payment Mode', value: paymentMode },
+        { label: isHindi ? 'विवरण' : 'Remarks', value: remarksText },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        setViewingVoucherSlip(displayVoucher);
+      },
+      printButtonLabel: isHindi ? '🖨️ वाउचर स्लिप देखें' : 'View Voucher Slip',
+      onClose: () => {
+        setSuccessModalInfo(null);
+      },
+      isHindi,
+    });
+
+    setVAmount(0);
+    setVSubHead('');
+    setVRemarks('');
+  };
+
   const handleAddIncomeVoucher = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(vAmount);
@@ -466,18 +688,41 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
       return;
     }
 
-    onAddVoucher({
-      voucherType: 'INCOME',
-      date: vDate,
-      headId: vHeadId,
-      subHeadName: undefined,
-      amount: amountNum,
-      paymentMode: 'BANK',
-      remarks: vRemarks.trim() || (isHindi ? 'आय प्राप्ति जमा' : 'Income Receipt'),
-    });
-    setVAmount(0);
-    setVSubHead('');
-    setVRemarks('');
+    // Duplicate Check: Same Head + Same Date + Same Amount
+    const duplicateIncome = vouchers.find(
+      (v) =>
+        v.voucherType === 'INCOME' &&
+        v.headId === vHeadId &&
+        v.date === vDate &&
+        Math.abs(v.amount - amountNum) < 0.01
+    );
+
+    if (duplicateIncome) {
+      const headObj = accountHeads.find((h) => h.id === vHeadId);
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान आय प्रविष्टि चेतावनी' : 'Duplicate Income Entry Warning',
+        message: isHindi
+          ? `⚠️ इस खाता शीर्षक (${headObj?.name || ''}) में दिनांक ${formatDateDDMMYYYY(vDate)} पर ₹${amountNum.toLocaleString('en-IN')} की आय प्रविष्टि पहले से मौजूद है!`
+          : `⚠️ An income entry of ₹${amountNum.toLocaleString('en-IN')} already exists on ${formatDateDDMMYYYY(vDate)}!`,
+        duplicateInfo: [
+          { label: isHindi ? 'वाउचर क्र.' : 'Voucher No', value: duplicateIncome.voucherNo || duplicateIncome.id },
+          { label: isHindi ? 'दिनांक' : 'Date', value: formatDateDDMMYYYY(duplicateIncome.date) },
+          { label: isHindi ? 'खाता शीर्षक' : 'Account Head', value: headObj?.name || '-' },
+          { label: isHindi ? 'राशि' : 'Amount', value: `₹${duplicateIncome.amount.toLocaleString('en-IN')}` },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executeAddIncomeVoucher(amountNum);
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
+
+    executeAddIncomeVoucher(amountNum);
   };
 
   const handleAddSubHeadSubmit = (e: React.FormEvent) => {
@@ -496,6 +741,100 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
     setSubHeadNameInput('');
     setSubHeadParentHeadId('');
     setSubHeadDescInput('');
+  };
+
+  const executeAddExpenditureVoucher = (amountNum: number) => {
+    const selectedWork = vWorkId ? works.find((w) => w.id === vWorkId) : undefined;
+    const selectedVendor = vVendorId ? vendors.find((vend) => vend.id === vVendorId) : undefined;
+    const selectedHead = accountHeads.find((h) => h.id === vHeadId);
+
+    const workSanctionCost = selectedWork
+      ? selectedWork.cost || (selectedWork.headAmount || 0) + (selectedWork.convergenceHeadAmount || 0)
+      : undefined;
+    const workSpentBefore = selectedWork
+      ? vouchers
+          .filter((v) => v.workId === selectedWork.id && v.voucherType === 'EXPENDITURE')
+          .reduce((s, v) => s + v.amount, 0)
+      : undefined;
+    const workRemainingAfter =
+      workSanctionCost !== undefined && workSpentBefore !== undefined
+        ? workSanctionCost - (workSpentBefore + amountNum)
+        : undefined;
+
+    const newVoucherObj = onAddVoucher({
+      voucherType: 'EXPENDITURE',
+      date: vDate,
+      headId: vHeadId,
+      subHeadName: vSubHead ? vSubHead : undefined,
+      amount: amountNum,
+      vendorId: vVendorId || undefined,
+      workId: vWorkId || undefined,
+      paymentMode: vPaymentMode || 'BANK',
+      remarks: vRemarks.trim() || (isHindi ? 'व्यय भुगतान निष्पादन' : 'Expenditure Payment'),
+      proposalNo: vProposalNo.trim() || undefined,
+      proposalDate: vProposalDate || undefined,
+      billNo: vBillNo.trim() || undefined,
+      billDate: vBillDate || undefined,
+      workSanctionAmount: workSanctionCost,
+      previousExpendedAmount: workSpentBefore,
+      remainingAmount: workRemainingAfter,
+      expenseCategory: vExpenseCategory || (vWorkId ? 'WORK' : 'GENERAL'),
+    });
+
+    const createdV: CashbookVoucher = newVoucherObj || {
+      id: `vouch-exp-${Date.now()}`,
+      voucherNo: `EXP-${new Date().getFullYear()}-001`,
+      voucherType: 'EXPENDITURE',
+      date: vDate,
+      headId: vHeadId,
+      subHeadName: vSubHead ? vSubHead : undefined,
+      amount: amountNum,
+      vendorId: vVendorId || undefined,
+      workId: vWorkId || undefined,
+      paymentMode: vPaymentMode || 'BANK',
+      remarks: vRemarks.trim() || (isHindi ? 'व्यय भुगतान निष्पादन' : 'Expenditure Payment'),
+      proposalNo: vProposalNo.trim() || undefined,
+      proposalDate: vProposalDate || undefined,
+      billNo: vBillNo.trim() || undefined,
+      billDate: vBillDate || undefined,
+      workSanctionAmount: workSanctionCost,
+      previousExpendedAmount: workSpentBefore,
+      remainingAmount: workRemainingAfter,
+      expenseCategory: vExpenseCategory || (vWorkId ? 'WORK' : 'GENERAL'),
+    };
+
+    setSuccessModalInfo({
+      title: isHindi ? 'रोकड़बही में व्यय वाउचर दर्ज हुआ!' : 'Expense Voucher Saved Successfully!',
+      message: isHindi
+        ? `खाता शीर्षक "${selectedHead?.name || 'व्यय खाता'}" से ₹${amountNum.toLocaleString('en-IN')} का भुगतान वाउचर सफलतापूर्वक सुरक्षित कर लिया गया है।`
+        : `Expenditure voucher of ₹${amountNum.toLocaleString('en-IN')} saved under "${selectedHead?.name || 'Expense Head'}".`,
+      recordType: isHindi ? 'रोकड़बही व्यय वाउचर (CASHBOOK EXPENDITURE)' : 'EXPENDITURE VOUCHER',
+      details: [
+        { label: isHindi ? 'वाउचर दिनांक' : 'Date', value: formatDateDDMMYYYY(vDate) },
+        { label: isHindi ? 'खाता शीर्षक' : 'Account Head', value: selectedHead?.name || '-' },
+        { label: isHindi ? 'भुगतान राशि' : 'Amount', value: `₹${amountNum.toLocaleString('en-IN')}` },
+        { label: isHindi ? 'वेंडर / आदाता' : 'Vendor', value: selectedVendor?.name || '-' },
+        { label: isHindi ? 'कार्य का नाम' : 'Work Name', value: selectedWork?.name || '-' },
+        { label: isHindi ? 'भुगतान माध्यम' : 'Payment Mode', value: vPaymentMode || 'BANK' },
+      ],
+      onPrint: () => {
+        setSuccessModalInfo(null);
+        setViewingNoteSheet(createdV);
+      },
+      printButtonLabel: isHindi ? '📄 नोटशीट / वाउचर देखें' : 'View Note Sheet / Voucher',
+      onClose: () => {
+        setSuccessModalInfo(null);
+      },
+      isHindi,
+    });
+
+    setVAmount(0);
+    setVSubHead('');
+    setVRemarks('');
+    setVProposalNo('');
+    setVProposalDate('');
+    setVBillNo('');
+    setVBillDate('');
   };
 
   const handleAddExpenditureVoucher = (e: React.FormEvent) => {
@@ -550,86 +889,110 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
       }
     }
 
-    const newVoucherObj = onAddVoucher({
-      voucherType: 'EXPENDITURE',
-      date: vDate,
-      headId: vHeadId,
-      subHeadName: vSubHead ? vSubHead : undefined,
-      amount: amountNum,
-      vendorId: vVendorId || undefined,
-      workId: vWorkId || undefined,
-      paymentMode: vPaymentMode || 'BANK',
-      remarks: vRemarks.trim() || (isHindi ? 'व्यय भुगतान निष्पादन' : 'Expenditure Payment'),
-    });
+    // Duplicate Check: Same Head + Same Date + Same Amount + (Same Work or Same Vendor)
+    const duplicateExp = vouchers.find(
+      (v) =>
+        v.voucherType === 'EXPENDITURE' &&
+        v.headId === vHeadId &&
+        v.date === vDate &&
+        Math.abs(v.amount - amountNum) < 0.01 &&
+        ((vWorkId && v.workId === vWorkId) || (vVendorId && v.vendorId === vVendorId) || (!vWorkId && !vVendorId))
+    );
 
-    setVAmount(0);
-    setVSubHead('');
-    setVRemarks('');
+    if (duplicateExp) {
+      const headObj = accountHeads.find((h) => h.id === vHeadId);
+      const vendObj = vendors.find((v) => v.id === vVendorId);
+      const workObj = works.find((w) => w.id === vWorkId);
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान व्यय प्रविष्टि चेतावनी' : 'Duplicate Expenditure Entry Warning',
+        message: isHindi
+          ? `⚠️ दिनांक ${formatDateDDMMYYYY(vDate)} पर इस खाता हेड (${headObj?.name || ''}) से ₹${amountNum.toLocaleString('en-IN')} का व्यय वाउचर पहले से मौजूद है!`
+          : `⚠️ An expenditure voucher of ₹${amountNum.toLocaleString('en-IN')} already exists on ${formatDateDDMMYYYY(vDate)}!`,
+        duplicateInfo: [
+          { label: isHindi ? 'वाउचर क्र.' : 'Voucher No', value: duplicateExp.voucherNo || duplicateExp.id },
+          { label: isHindi ? 'दिनांक' : 'Date', value: formatDateDDMMYYYY(duplicateExp.date) },
+          { label: isHindi ? 'खाता शीर्षक' : 'Account Head', value: headObj?.name || '-' },
+          { label: isHindi ? 'राशि' : 'Amount', value: `₹${duplicateExp.amount.toLocaleString('en-IN')}` },
+          { label: isHindi ? 'वेंडर / कार्य' : 'Vendor/Work', value: vendObj?.name || workObj?.name || '-' },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executeAddExpenditureVoucher(amountNum);
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
 
-    // Auto-open Payment Note Sheet for newly created expenditure voucher
-    const createdV: CashbookVoucher = newVoucherObj || {
-      id: `vouch-exp-${Date.now()}`,
-      voucherNo: `EXP-${new Date().getFullYear()}-001`,
-      voucherType: 'EXPENDITURE',
-      date: vDate,
-      headId: vHeadId,
-      subHeadName: vSubHead ? vSubHead : undefined,
-      amount: amountNum,
-      vendorId: vVendorId || undefined,
-      workId: vWorkId || undefined,
-      paymentMode: vPaymentMode || 'BANK',
-      remarks: vRemarks.trim() || (isHindi ? 'व्यय भुगतान निष्पादन' : 'Expenditure Payment'),
-    };
-
-    setViewingNoteSheet(createdV);
+    executeAddExpenditureVoucher(amountNum);
   };
 
-  // Filtered Vouchers for Reports
+  // Filtered Vouchers for Reports (sorted chronological: oldest to latest date by date)
   const filteredVouchers = useMemo(() => {
-    return vouchers.filter((v) => {
-      if (filterStartDate && v.date < filterStartDate) return false;
-      if (filterEndDate && v.date > filterEndDate) return false;
+    return vouchers
+      .filter((v) => {
+        if (filterStartDate && v.date < filterStartDate) return false;
+        if (filterEndDate && v.date > filterEndDate) return false;
 
-      // Financial Year Filter
-      if (filterFinancialYear !== 'ALL') {
-        if (!isInFinancialYear(v.date, filterFinancialYear)) return false;
-      }
-
-      // Month Filter
-      if (filterMonth > 0) {
-        const monthNum = parseInt(v.date.split('-')[1] || '0', 10);
-        if (monthNum !== filterMonth) return false;
-      }
-
-      // Ledger Mode Type Filter
-      if (activeTab === CashbookTab.LEDGER_REPORT) {
-        if (ledgerMode === 'INCOME' && v.voucherType !== 'INCOME') return false;
-        if (ledgerMode === 'EXPENDITURE' && v.voucherType !== 'EXPENDITURE') return false;
-      }
-
-      if (filterHeadId !== 'ALL' && v.headId !== filterHeadId) return false;
-      if (filterVendorId !== 'ALL' && v.vendorId !== filterVendorId) return false;
-      if (filterWorkId !== 'ALL' && v.workId !== filterWorkId) return false;
-
-      if (filterSearch) {
-        const q = filterSearch.toLowerCase();
-        const head = accountHeads.find((h) => h.id === v.headId)?.name.toLowerCase() || '';
-        const vendor = vendors.find((ven) => ven.id === v.vendorId)?.name.toLowerCase() || '';
-        const work = works.find((w) => w.id === v.workId)?.name.toLowerCase() || '';
-        const remarks = (v.remarks || '').toLowerCase();
-        const vNo = (v.voucherNo || '').toLowerCase();
-        if (
-          !head.includes(q) &&
-          !vendor.includes(q) &&
-          !work.includes(q) &&
-          !remarks.includes(q) &&
-          !vNo.includes(q)
-        ) {
-          return false;
+        // Financial Year Filter
+        if (filterFinancialYear !== 'ALL') {
+          if (!isInFinancialYear(v.date, filterFinancialYear)) return false;
         }
-      }
-      return true;
-    });
+
+        // Month Filter
+        if (filterMonth > 0) {
+          const monthNum = parseInt(v.date.split('-')[1] || '0', 10);
+          if (monthNum !== filterMonth) return false;
+        }
+
+        // Ledger Mode Type Filter
+        if (activeTab === CashbookTab.LEDGER_REPORT) {
+          if (ledgerMode === 'INCOME' && v.voucherType !== 'INCOME') return false;
+          if (ledgerMode === 'EXPENDITURE' && v.voucherType !== 'EXPENDITURE') return false;
+        }
+
+        if (filterHeadId !== 'ALL' && v.headId !== filterHeadId) return false;
+        if (filterVendorId !== 'ALL' && v.vendorId !== filterVendorId) return false;
+        if (filterWorkId !== 'ALL' && v.workId !== filterWorkId) return false;
+
+        if (filterSearch) {
+          const q = filterSearch.toLowerCase();
+          const head = accountHeads.find((h) => h.id === v.headId)?.name.toLowerCase() || '';
+          const vendor = vendors.find((ven) => ven.id === v.vendorId)?.name.toLowerCase() || '';
+          const work = works.find((w) => w.id === v.workId)?.name.toLowerCase() || '';
+          const remarks = (v.remarks || '').toLowerCase();
+          const vNo = (v.voucherNo || '').toLowerCase();
+          const taxPayer = getTaxPayerDetails(v);
+          const taxPayerName = (taxPayer?.name || '').toLowerCase();
+          const taxPayerGuardian = (taxPayer?.guardianName || '').toLowerCase();
+          const taxPayerSamagra = (taxPayer?.samagraId || '').toLowerCase();
+          const taxReceiptNo = (taxPayer?.receiptNo || '').toLowerCase();
+
+          if (
+            !head.includes(q) &&
+            !vendor.includes(q) &&
+            !work.includes(q) &&
+            !remarks.includes(q) &&
+            !vNo.includes(q) &&
+            !taxPayerName.includes(q) &&
+            !taxPayerGuardian.includes(q) &&
+            !taxPayerSamagra.includes(q) &&
+            !taxReceiptNo.includes(q)
+          ) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.date !== b.date) {
+          return a.date.localeCompare(b.date);
+        }
+        return (a.voucherNo || '').localeCompare(b.voucherNo || '');
+      });
   }, [
     vouchers,
     filterStartDate,
@@ -645,6 +1008,12 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
     accountHeads,
     vendors,
     works,
+    payments,
+    families,
+    otherTaxReceipts,
+    bookingRents,
+    buildingPermissions,
+    businessRegistrations,
   ]);
 
   // Export CSV Handler
@@ -744,6 +1113,42 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
             💰
           </div>
         </div>
+      </div>
+
+      {/* TAXATION RECEIPTS & CASHBOOK SYNC STATUS BAR */}
+      <div className="p-3.5 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl shadow-md border border-emerald-700/50 flex flex-col md:flex-row items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg shrink-0">
+            ⚡
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 rounded-md text-[10px] font-black uppercase tracking-wider">
+                {isHindi ? 'स्वतः सिंक सक्रिय' : 'Auto Sync Active'}
+              </span>
+              <p className="text-xs font-black text-white">
+                {isHindi
+                  ? 'कर संग्रह, अन्य कर, भवन अनुमति एवं बुकिंग रसीदें कैशबुक से 100% सिंक हैं'
+                  : 'Tax collections, building permissions & booking rents are synced with Cashbook'}
+              </p>
+            </div>
+            <p className="text-[11px] text-emerald-200/80 mt-0.5">
+              {isHindi
+                ? `कुल कर रसीदें: ${payments.length} | अन्य कर: ${otherTaxReceipts.length} | भवन अनुमति: ${buildingPermissions.length} | बुकिंग किराया: ${bookingRents.length}`
+                : `Tax Receipts: ${payments.length} | Other Tax: ${otherTaxReceipts.length} | Building Perms: ${buildingPermissions.length} | Booking Rents: ${bookingRents.length}`}
+            </p>
+          </div>
+        </div>
+
+        {onSyncTaxTransactions && (
+          <button
+            onClick={onSyncTaxTransactions}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+          >
+            <span>🔄</span>
+            <span>{isHindi ? 'कर रसीदें सिंक करें' : 'Sync Tax Receipts'}</span>
+          </button>
+        )}
       </div>
 
       {/* MODULE TAB NAVIGATION BAR */}
@@ -1856,6 +2261,21 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
+                  🏷️ {isHindi ? 'व्यय श्रेणी (Expense Category)' : 'Expense Category'}
+                </label>
+                <select
+                  value={vExpenseCategory}
+                  onChange={(e) => setVExpenseCategory(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold text-rose-900"
+                >
+                  <option value="WORK">🏗️ {isHindi ? 'निर्माण कार्य व्यय (Construction / Work Project)' : 'Work Project'}</option>
+                  <option value="OFFICE">🏢 {isHindi ? 'कार्यालयीन व्यय (Office & Admin Expenses)' : 'Office Expenses'}</option>
+                  <option value="GENERAL">📑 {isHindi ? 'सामान्य / अन्य विकास व्यय (General / Other)' : 'General Expense'}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
                   📁 {isHindi ? 'पंचायत व्यय उप-शीर्षक (Panchayat Expense Subhead)' : 'Expense Subhead'}
                 </label>
                 <select
@@ -1911,7 +2331,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                 </select>
               </div>
 
-              {/* Work Remaining Budget Indicator */}
+              {/* Work Remaining Budget Live Indicator */}
               {vWorkId && (() => {
                 const workObj = works.find((w) => w.id === vWorkId);
                 if (!workObj) return null;
@@ -1919,22 +2339,85 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                 const workSpent = vouchers
                   .filter((v) => v.workId === workObj.id && v.voucherType === 'EXPENDITURE')
                   .reduce((s, v) => s + v.amount, 0);
+                const currentEnteredAmt = Number(vAmount) || 0;
                 const workRemaining = workCost - workSpent;
+                const balanceAfterCurrent = workRemaining - currentEnteredAmt;
 
                 return (
-                  <div className={`p-2.5 rounded-xl border text-xs space-y-1 ${workRemaining >= 0 ? 'bg-teal-50 border-teal-200 text-teal-950' : 'bg-rose-100 border-rose-300 text-rose-950'}`}>
+                  <div className={`p-3 rounded-xl border text-xs space-y-1.5 ${balanceAfterCurrent >= 0 ? 'bg-teal-50 border-teal-200 text-teal-950' : 'bg-rose-100 border-rose-300 text-rose-950'}`}>
                     <div className="flex justify-between items-center font-bold">
-                      <span>🏗️ {isHindi ? 'चयनित कार्य का शेष बजट:' : 'Work Remaining Budget:'}</span>
+                      <span>🏗️ {isHindi ? 'कार्य का स्वीकृत व शेष बजट:' : 'Work Sanction & Balance:'}</span>
                       <span className="font-mono font-black text-sm">₹{workRemaining.toLocaleString('en-IN')}</span>
                     </div>
-                    <p className="text-[10px] text-slate-600 font-semibold">
-                      {isHindi
-                        ? `कुल स्वीकृत लागत: ₹${workCost.toLocaleString('en-IN')} | अब तक कुल व्यय: ₹${workSpent.toLocaleString('en-IN')}`
-                        : `Sanctioned Cost: ₹${workCost.toLocaleString('en-IN')} | Total Spent: ₹${workSpent.toLocaleString('en-IN')}`}
-                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold border-t border-teal-200/60 pt-1 text-slate-700">
+                      <div>स्वीकृत राशि: <span className="font-mono font-bold text-slate-900">₹{workCost.toLocaleString('en-IN')}</span></div>
+                      <div>पूर्व व्यय: <span className="font-mono font-bold text-slate-900">₹{workSpent.toLocaleString('en-IN')}</span></div>
+                      <div>वर्तमान व्यय: <span className="font-mono font-bold text-rose-700">₹{currentEnteredAmt.toLocaleString('en-IN')}</span></div>
+                      <div>भुगतान बाद शेष: <span className="font-mono font-black text-emerald-800">₹{balanceAfterCurrent.toLocaleString('en-IN')}</span></div>
+                    </div>
                   </div>
                 );
               })()}
+
+              {/* PROPOSAL & BILL DETAILS FOR NOTE SHEET */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                <p className="font-black text-slate-900 text-xs flex items-center gap-1.5 border-b border-slate-200 pb-1">
+                  <span>📑</span>
+                  <span>{isHindi ? 'नोटशीट संदर्भ विवरण (Note Sheet Reference Details)' : 'Note Sheet Reference'}</span>
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                      {isHindi ? 'प्रस्ताव क्र. (Proposal No.)' : 'Proposal No.'}
+                    </label>
+                    <input
+                      type="text"
+                      value={vProposalNo}
+                      onChange={(e) => setVProposalNo(e.target.value)}
+                      placeholder={isHindi ? 'e.g. प्रस्ताव 04/2026' : 'Proposal 01'}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                      {isHindi ? 'प्रस्ताव दिनांक (Date)' : 'Proposal Date'}
+                    </label>
+                    <input
+                      type="date"
+                      value={vProposalDate}
+                      onChange={(e) => setVProposalDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                      {isHindi ? 'बिल / देयक क्र. (Bill No.)' : 'Bill / Invoice No.'}
+                    </label>
+                    <input
+                      type="text"
+                      value={vBillNo}
+                      onChange={(e) => setVBillNo(e.target.value)}
+                      placeholder={isHindi ? 'e.g. बिल नं. 142' : 'Bill No. 142'}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 text-[11px] mb-1">
+                      {isHindi ? 'बिल दिनांक (Bill Date)' : 'Bill Date'}
+                    </label>
+                    <input
+                      type="date"
+                      value={vBillDate}
+                      onChange={(e) => setVBillDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
@@ -2024,13 +2507,37 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                           </td>
                           <td className="p-2.5 text-slate-600 text-[11px]">{v.remarks}</td>
                           <td className="p-2.5 text-right">
-                            <button
-                              onClick={() => setDeleteConfirmModal({ id: v.id, name: `${v.voucherNo} (${v.headName})`, type: 'VOUCHER' })}
-                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Delete Voucher"
-                            >
-                              🗑️
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setViewingNoteSheet(v)}
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                                title={isHindi ? 'नोटशीट देखें व प्रिंट करें' : 'View & Print Note Sheet'}
+                              >
+                                <span>📄</span>
+                                <span>{isHindi ? 'नोटशीट' : 'Note Sheet'}</span>
+                              </button>
+                              <button
+                                onClick={() => setViewingVoucherSlip(v)}
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                                title={isHindi ? 'वाउचर स्लिप देखें' : 'View Voucher Slip'}
+                              >
+                                <span>🧾</span>
+                                <span>{isHindi ? 'स्लिप' : 'Slip'}</span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeleteConfirmModal({
+                                    id: v.id,
+                                    name: `${v.voucherNo} (${headObj?.name || ''})`,
+                                    type: 'VOUCHER',
+                                  })
+                                }
+                                className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Delete Voucher"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -3042,6 +3549,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
         const v = viewingNoteSheet;
         const headObj = accountHeads.find((h) => h.id === v.headId);
         const workObj = works.find((w) => w.id === v.workId);
+        const vendorObj = vendors.find((ve) => ve.id === v.vendorId);
 
         // Calculate Available Head Balance After this Voucher
         const headData = headBalances[v.headId];
@@ -3052,11 +3560,29 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
         const availBalAfterVoucher = isRecorded ? currentAvailBal : currentAvailBal - v.amount;
         const availBalBeforeVoucher = availBalAfterVoucher + v.amount;
 
-        const schemeOrWorkName = workObj?.name || (headObj ? headObj.name : (v.remarks || 'ग्राम पंचायत विकास कार्य'));
-        const proposalNoStr = workObj?.adminSanctionDate 
-          ? `प्रस्ताव/स्वीकृति क्रमांक ${workObj.id.replace('work-', 'W-')}` 
-          : `प्रस्ताव क्र. ${v.voucherNo}`;
-        const proposalDateStr = formatDateDDMMYYYY(workObj?.adminSanctionDate || v.date);
+        const isWorkExpense = !!(v.workId || workObj || v.expenseCategory === 'WORK');
+        const schemeName = headObj ? headObj.name : 'ग्राम पंचायत विकास योजना / मद';
+        const karyaName = isWorkExpense 
+          ? (workObj?.name || v.remarks || 'निर्माण कार्य')
+          : (v.subHeadName || v.remarks || 'कार्यालयीन व्यवस्था एवं प्रशासनिक व्यय');
+        const vendorFirmName = vendorObj?.name || (v as any).vendorName || 'विभागीय / संबंधित विक्रेता / फर्म';
+
+        const proposalNoStr = v.proposalNo || (workObj?.adminSanctionDate 
+          ? `स्वीकृति क्र. ${workObj.id.replace('work-', 'W-')}` 
+          : '—');
+        const proposalDateStr = v.proposalDate 
+          ? formatDateDDMMYYYY(v.proposalDate)
+          : (workObj?.adminSanctionDate ? formatDateDDMMYYYY(workObj.adminSanctionDate) : '—');
+        const billNoStr = v.billNo || '—';
+        const billDateStr = v.billDate ? formatDateDDMMYYYY(v.billDate) : '—';
+
+        const workSanctionCost = v.workSanctionAmount ?? (workObj ? (workObj.cost || (workObj.headAmount || 0) + (workObj.convergenceHeadAmount || 0)) : undefined);
+        const workSpentBefore = v.previousExpendedAmount ?? (workObj ? vouchers.filter(vo => vo.workId === workObj.id && vo.voucherType === 'EXPENDITURE' && vo.id !== v.id).reduce((s, vo) => s + vo.amount, 0) : 0);
+        const workRemainingAfter = v.remainingAmount ?? (workSanctionCost !== undefined ? Math.max(0, workSanctionCost - (workSpentBefore + v.amount)) : undefined);
+
+        const expenseCategoryStr = v.expenseCategory === 'WORK' 
+          ? 'निर्माण कार्य व्यय (Construction Work)' 
+          : (v.expenseCategory === 'OFFICE' ? 'कार्यालयीन व्यय (Office Expense)' : 'सामान्य / अन्य व्यय (General Expense)');
 
         return (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0">
@@ -3107,52 +3633,123 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                   officeDetails={officeDetails}
                   adminPanchayat={(officeDetails as any)?.gramPanchayat}
                   voucherTitle="शासकीय भुगतान नोटशीट प्रपत्र (OFFICIAL PAYMENT NOTE SHEET)"
-                  voucherSubTitle="म.प्र. पंचायत राज एवं ग्राम स्वराज अधिनियम (निर्माण कार्य एवं सामग्री भुगतान आदेश)"
                   badgeBgColor="bg-slate-100 text-slate-900 border-slate-400"
                 />
 
                 {/* MAIN INNER FRAME BOX */}
-                <div className="border-2 border-slate-900 p-5 sm:p-7 space-y-6 bg-white rounded-lg">
+                <div className="border-2 border-slate-900 p-5 sm:p-7 space-y-5 bg-white rounded-lg">
                   {/* TOP WORK / HEAD / AVAILABLE BALANCE ROW */}
-                  <div className="border-b-2 border-slate-900 pb-4 space-y-3">
-                    <p className="font-black text-sm sm:text-base text-slate-900">
-                      <span>कार्य योजना का नाम / मद का नाम: </span>
-                      <span className="underline decoration-dotted underline-offset-4">{schemeOrWorkName}</span>
-                      {v.subHeadName && <span className="text-xs font-bold text-slate-700"> ({v.subHeadName})</span>}
-                    </p>
+                  <div className="border-b-2 border-slate-900 pb-4 space-y-3 font-sans">
+                    {/* KEY SCHEME / WORK / VENDOR SUMMARY BAR */}
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-300 space-y-1.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-xs sm:text-sm font-bold text-slate-800">
+                          <span className="text-slate-500 font-medium">योजना का नाम (Scheme/Head): </span>
+                          <span className="text-slate-950 font-black underline decoration-dotted">{schemeName}</span>
+                        </p>
+                        <span className="text-[11px] px-2 py-0.5 bg-slate-200 text-slate-800 font-bold rounded">
+                          {expenseCategoryStr}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800">
+                        <span className="text-slate-500 font-medium">कार्य का नाम (Work/Purpose): </span>
+                        <span className="text-slate-950 font-black underline decoration-dotted">{karyaName}</span>
+                      </p>
+                      <p className="text-xs font-bold text-slate-800">
+                        <span className="text-slate-500 font-medium">वेंडर / फर्म का नाम (Vendor/Firm): </span>
+                        <span className="text-slate-900 font-bold">{vendorFirmName}</span>
+                      </p>
+                    </div>
 
-                    {/* AVAILABLE HEAD BALANCE INDICATOR */}
-                    <div className="p-3 bg-slate-50 border-2 border-slate-800 rounded-lg font-sans text-xs flex flex-wrap items-center justify-between gap-2 font-bold shadow-sm">
-                      <div className="space-y-0.5">
-                        <p className="text-slate-700">
-                          🏛️ खाता मद (Account Head): <span className="text-slate-900 font-black">{headObj?.name || 'मुख्य मद'}</span>
-                        </p>
-                        <p className="text-slate-600 text-[11px]">
-                          भुगतान पूर्व मद शेष: <span className="font-mono text-slate-800">₹{availBalBeforeVoucher.toLocaleString('en-IN')}</span> | वर्तमान भुगतान राशि: <span className="font-mono text-rose-800 font-bold">₹{v.amount.toLocaleString('en-IN')}</span>
-                        </p>
+                    {/* REFERENCE & METADATA GRID */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-300 font-medium">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">प्रस्ताव क्र. :</span>
+                        <span className="font-bold text-slate-900">{proposalNoStr}</span>
                       </div>
-                      <div className="text-right bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-400">
-                        <p className="text-[10px] text-emerald-800 uppercase font-black">भुगतान पश्चात् उपलब्ध मद शेष (Available Head Balance)</p>
-                        <p className="text-base font-black font-mono text-emerald-950">₹{availBalAfterVoucher.toLocaleString('en-IN')}</p>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">प्रस्ताव दिनांक:</span>
+                        <span className="font-bold text-slate-900">{proposalDateStr}</span>
                       </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">बिल क्र. व दिनांक:</span>
+                        <span className="font-bold text-slate-900">{billNoStr} {v.billDate ? `(${billDateStr})` : ''}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">वाउचर क्र. व दिनांक:</span>
+                        <span className="font-bold font-mono text-slate-900">{v.voucherNo} ({formatDateDDMMYYYY(v.date)})</span>
+                      </div>
+                    </div>
+
+                    {/* ALL FINANCIAL INDICATORS TABLE (PROPERLY FORMATTED & EASILY VISIBLE) */}
+                    <div className="border border-slate-800 rounded-lg overflow-hidden font-sans">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-slate-900 text-white font-bold">
+                          <tr>
+                            <th className="p-2 border-r border-slate-700">वित्तीय विवरण (Financial Indicators)</th>
+                            <th className="p-2 text-right">राशि (Amount ₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 font-medium text-slate-900">
+                          {isWorkExpense && workSanctionCost !== undefined && (
+                            <>
+                              <tr className="bg-slate-50">
+                                <td className="p-2 border-r border-slate-200 font-semibold">1. स्वीकृत कार्य लागत (Sanctioned Work Cost)</td>
+                                <td className="p-2 text-right font-mono font-bold text-slate-900">₹{workSanctionCost.toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr>
+                                <td className="p-2 border-r border-slate-200">2. कार्य से पूर्व व्यय राशि (Already Expended from Work Fund)</td>
+                                <td className="p-2 text-right font-mono font-bold text-slate-700">₹{workSpentBefore.toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr className="bg-rose-50/50">
+                                <td className="p-2 border-r border-slate-200 font-bold text-rose-900">3. वर्तमान वाउचर भुगतान राशि (Current Voucher Payment)</td>
+                                <td className="p-2 text-right font-mono font-black text-rose-700 text-sm">₹{v.amount.toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr className="bg-emerald-50">
+                                <td className="p-2 border-r border-slate-200 font-bold text-emerald-950">4. वर्तमान भुगतान उपरांत शेष कार्य फंड (Remaining Fund After Booking)</td>
+                                <td className="p-2 text-right font-mono font-black text-emerald-800 text-sm">₹{(workRemainingAfter !== undefined ? workRemainingAfter : 0).toLocaleString('en-IN')}</td>
+                              </tr>
+                            </>
+                          )}
+                          {!isWorkExpense && (
+                            <>
+                              <tr className="bg-slate-50">
+                                <td className="p-2 border-r border-slate-200 font-semibold">1. योजना / मद में भुगतान पूर्व उपलब्ध बजट (Head Balance Before Payment)</td>
+                                <td className="p-2 text-right font-mono font-bold text-slate-900">₹{availBalBeforeVoucher.toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr className="bg-rose-50/50">
+                                <td className="p-2 border-r border-slate-200 font-bold text-rose-900">2. वर्तमान देयक/वाउचर भुगतान राशि (Current Payment Amount)</td>
+                                <td className="p-2 text-right font-mono font-black text-rose-700 text-sm">₹{v.amount.toLocaleString('en-IN')}</td>
+                              </tr>
+                              <tr className="bg-emerald-50">
+                                <td className="p-2 border-r border-slate-200 font-bold text-emerald-950">3. भुगतान उपरांत योजना / मद शेष बजट (Remaining Head Balance)</td>
+                                <td className="p-2 text-right font-mono font-black text-emerald-800 text-sm">₹{availBalAfterVoucher.toLocaleString('en-IN')}</td>
+                              </tr>
+                            </>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
                   {/* PARAGRAPH 1 */}
                   <div className="text-justify leading-loose space-y-3 font-medium text-slate-900">
+                    {isWorkExpense ? (
+                      <p>
+                        कार्य स्वीकृति योजना <span className="font-bold underline decoration-dotted px-1">{schemeName}</span> से है , जिसमे ग्राम सभा/ग्राम पंचायत के प्रस्ताव क्र. <span className="font-bold underline decoration-dotted px-1">{proposalNoStr}</span> दिनांक <span className="font-bold underline decoration-dotted px-1">{proposalDateStr}</span> के निर्णय के अनुसार कार्य <span className="font-bold underline decoration-dotted px-1">{karyaName}</span> स्वीकृत हुआ है । जिसकी स्वीकृति के आधार पर सचिव / ग्राम रोजगार सहायक को बिल क्र. <span className="font-bold underline decoration-dotted px-1">{billNoStr}</span> {v.billDate ? `दिनांक ${billDateStr}` : ''} के अनुसार वेंडर/फर्म <span className="font-bold underline decoration-dotted px-1">{vendorFirmName}</span> को भुगतान हेतु आदेशित किया जाता है।
+                      </p>
+                    ) : (
+                      <p>
+                        व्यय स्वीकृति योजना <span className="font-bold underline decoration-dotted px-1">{schemeName}</span> अंतर्गत उप-शीर्षक/कार्य <span className="font-bold underline decoration-dotted px-1">{karyaName}</span> हेतु है । जिसकी स्वीकृति के आधार पर सचिव / ग्राम रोजगार सहायक को बिल क्र. <span className="font-bold underline decoration-dotted px-1">{billNoStr}</span> {v.billDate ? `दिनांक ${billDateStr}` : ''} के अनुसार वेंडर/फर्म <span className="font-bold underline decoration-dotted px-1">{vendorFirmName}</span> को भुगतान हेतु आदेशित किया जाता है।
+                      </p>
+                    )}
                     <p>
-                      कार्य स्वीकृति योजना <span className="font-bold underline decoration-dotted px-1">{schemeOrWorkName}</span> से है , जिसमे ग्राम सभा,ग्राम पंचायत, के प्रस्ताव क्र. <span className="font-bold underline decoration-dotted px-1">{proposalNoStr}</span> दिनांक <span className="font-bold underline decoration-dotted px-1">{proposalDateStr}</span> के निर्णय के अनुसार कार्य <span className="font-bold underline decoration-dotted px-1">{schemeOrWorkName}</span> स्वीकृत हुआ है ।
-                    </p>
-                    <p>
-                      जिसकी स्वीकृति के आधार पर सचिव,ग्राम रोजगार सहायक को बिल भुगतान हेतु आदेशित किया जाता है
-                    </p>
-                    <p>
-                      जो बिल मस्टर पूर्णतः सत्य एवं सही है , उसमे कही कोई त्रुटि निकलती है तो मै स्वयं जिम्मेदार रहूंगा ।
+                      जो बिल मस्टर पूर्णतः सत्य एवं सही है , उसमे कहीं कोई त्रुटि निकलती है तो मैं स्वयं जिम्मेदार रहूँगा ।
                     </p>
                   </div>
 
                   {/* SIGNATURES ROW 1 (2 Columns: निगरानी समिति सदस्य / सरपंच) */}
-                  <div className="pt-8 pb-2 grid grid-cols-2 gap-8 text-center font-bold text-xs">
+                  <div className="pt-6 pb-2 grid grid-cols-2 gap-8 text-center font-bold text-xs">
                     <div className="flex flex-col items-center justify-end h-16">
                       <p className="border-t-2 border-slate-900 pt-1 w-48 font-black">निगरानी समिति सदस्य</p>
                     </div>
@@ -3161,17 +3758,17 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="border-t-2 border-dashed border-slate-900 my-4" />
+                  <div className="border-t-2 border-dashed border-slate-900 my-3" />
 
                   {/* PARAGRAPH 2 */}
                   <div className="text-justify leading-loose space-y-3 font-medium text-slate-900">
                     <p>
-                      सरपंच महोदय के आदेशानुसार बिल राशि <span className="font-bold font-mono text-base underline decoration-dotted px-1">₹{v.amount.toLocaleString('en-IN')}</span> है , जो कि योजना <span className="font-bold underline decoration-dotted px-1">{schemeOrWorkName}</span> से डिजीटल भुगतान हेतु ऑनलाईन पोर्टल के माध्यम से संबंधितो के खातो मे भुगतान किया जाता है , जिसका ई.पी.ओ. वाउचर क्र. <span className="font-bold font-mono underline decoration-dotted px-1">{v.voucherNo}</span> दिनांक <span className="font-bold font-mono underline decoration-dotted px-1">{formatDateDDMMYYYY(v.date)}</span> है जो कि रोकडबही मे लिखा जावे ।
+                      सरपंच महोदय के आदेशानुसार बिल राशि <span className="font-bold font-mono text-base underline decoration-dotted px-1">₹{v.amount.toLocaleString('en-IN')}</span> है , जो कि योजना <span className="font-bold underline decoration-dotted px-1">{schemeName}</span> (कार्य: <span className="font-bold underline decoration-dotted px-1">{karyaName}</span>) से डिजीटल भुगतान हेतु ऑनलाईन पोर्टल के माध्यम से वेंडर/फर्म <span className="font-bold underline decoration-dotted px-1">{vendorFirmName}</span> के खाते में भुगतान किया जाता है , जिसका ई.पी.ओ. वाउचर क्र. <span className="font-bold font-mono underline decoration-dotted px-1">{v.voucherNo}</span> दिनांक <span className="font-bold font-mono underline decoration-dotted px-1">{formatDateDDMMYYYY(v.date)}</span> है जो कि रोकड़बही में लिखा जावे ।
                     </p>
                   </div>
 
                   {/* SIGNATURES ROW 2 (3 Columns: सरपंच / निगरानी समिति सदस्य / सचिव) */}
-                  <div className="pt-10 grid grid-cols-3 gap-4 text-center font-bold text-xs">
+                  <div className="pt-8 grid grid-cols-3 gap-4 text-center font-bold text-xs">
                     <div className="flex flex-col items-center justify-end h-16">
                       <p className="border-t-2 border-slate-900 pt-1 w-32 font-black">सरपंच</p>
                     </div>
@@ -3738,6 +4335,12 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* DUPLICATE CASHBOOK ENTRY WARNING MODAL */}
+      {duplicateModalInfo && <DuplicateWarningModal {...duplicateModalInfo} />}
+
+      {/* SUCCESS CONFIRMATION POPUP MODAL */}
+      {successModalInfo && <SuccessPopupModal {...successModalInfo} />}
     </div>
   );
 };

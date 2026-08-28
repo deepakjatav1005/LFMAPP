@@ -4,6 +4,12 @@ import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
 import { formatDateDDMMYYYY, triggerPrint, getCleanOfficeTitle } from '../utils/printUtils';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import {
+  DuplicateWarningModal,
+  DuplicateWarningDetails,
+  SuccessPopupModal,
+  SuccessPopupDetails,
+} from './EntryFeedbackModals';
 
 interface BookingRentViewProps {
   bookingList: BookingRentRecord[];
@@ -50,6 +56,10 @@ export const BookingRentView: React.FC<BookingRentViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
+  // Duplicate Warning & Success Popup Modal State
+  const [duplicateModalInfo, setDuplicateModalInfo] = useState<DuplicateWarningDetails | null>(null);
+  const [successModalInfo, setSuccessModalInfo] = useState<SuccessPopupDetails | null>(null);
+
   // Filtered beneficiaries for autocomplete selection
   const searchedFamilies = useMemo(() => {
     if (!beneficiarySearch.trim()) return families.slice(0, 15);
@@ -74,24 +84,9 @@ export const BookingRentView: React.FC<BookingRentViewProps> = ({
     setBeneficiarySearch(`${fam.name} ${fam.surname} (समग्र ID: ${fam.samagraId})`);
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFamily) {
-      alert(isHindi ? 'कृपया पंजीकृत हितग्राही का चयन करें।' : 'Please select a registered beneficiary.');
-      return;
-    }
-
+  const executeSaveBooking = async () => {
+    if (!selectedFamily) return;
     const amountNum = Number(chargeAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      alert(isHindi ? 'कृपया वैध किराया राशि दर्ज करें।' : 'Please enter a valid charge amount.');
-      return;
-    }
-
-    if (!startDate || !endDate) {
-      alert(isHindi ? 'कृपया बुकिंग प्रारंभ एवं समाप्ति तिथि चुनें।' : 'Please select valid start and end dates.');
-      return;
-    }
-
     const finalFacility = facilityName === 'OTHER' ? customFacility || 'अन्य परिसंपत्ति' : facilityName;
     const finalPurpose = purpose === 'OTHER' ? customPurpose || 'अन्य प्रयोजन' : purpose;
 
@@ -117,12 +112,31 @@ export const BookingRentView: React.FC<BookingRentViewProps> = ({
         remarks: remarks.trim() || undefined,
       });
 
-      setNotification(
-        isHindi
-          ? `✅ बुकिंग वाउचर सफलतापूर्वक दर्ज हुआ एवं कैशबुक में आय वाउचर स्वतः जोड़ दिया गया!`
-          : `✅ Booking voucher created & automatically linked to Cashbook Income!`
-      );
-      setTimeout(() => setNotification(null), 4000);
+      // Show Successful Popup Confirmation Modal
+      setSuccessModalInfo({
+        title: isHindi ? 'बुकिंग वाउचर सफलतापूर्वक दर्ज हुआ!' : 'Booking Voucher Saved Successfully!',
+        message: isHindi
+          ? `ग्राम पंचायत परिसंपत्ति/भवन बुकिंग वाउचर सफलतापूर्वक पंजीकृत हो गया है एवं कैशबुक आय में सुरक्षित कर दिया गया है।`
+          : `Booking voucher registered successfully and recorded in Cashbook Income.`,
+        recordType: isHindi ? 'बुकिंग रसीद' : 'BOOKING RECEIPT',
+        details: [
+          { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: `${selectedFamily.name} ${selectedFamily.surname}` },
+          { label: isHindi ? 'परिसंपत्ति / भवन' : 'Facility', value: finalFacility },
+          { label: isHindi ? 'बुकिंग अवधि' : 'Dates', value: `${formatDateDDMMYYYY(startDate)} से ${formatDateDDMMYYYY(endDate)}` },
+          { label: isHindi ? 'किराया शुल्क राशि' : 'Rent Amount', value: `₹${amountNum.toLocaleString('en-IN')}` },
+          { label: isHindi ? 'भुगतान माध्यम' : 'Payment Mode', value: paymentMode },
+        ],
+        printButtonLabel: isHindi ? '🖨️ रसीद प्रिंट करें' : 'Print Receipt',
+        onPrint: () => {
+          if (created) {
+            setSelectedBookingForPrint(created as BookingRentRecord);
+          }
+        },
+        onClose: () => {
+          setSuccessModalInfo(null);
+        },
+        isHindi,
+      });
 
       // Reset form
       setSelectedFamilyId('');
@@ -132,15 +146,70 @@ export const BookingRentView: React.FC<BookingRentViewProps> = ({
       setRemarks('');
       setTransactionId('');
       setActiveTab('LIST');
-      if (created) {
-        setSelectedBookingForPrint(created as BookingRentRecord);
-      }
     } catch (err) {
       console.error('Error creating booking voucher:', err);
       alert(isHindi ? 'बुकिंग वाउचर बनाने में त्रुटि हुई।' : 'Error creating booking voucher.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFamily) {
+      alert(isHindi ? 'कृपया पंजीकृत हितग्राही का चयन करें।' : 'Please select a registered beneficiary.');
+      return;
+    }
+
+    const amountNum = Number(chargeAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      alert(isHindi ? 'कृपया वैध किराया राशि दर्ज करें।' : 'Please enter a valid charge amount.');
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      alert(isHindi ? 'कृपया बुकिंग प्रारंभ एवं समाप्ति तिथि चुनें।' : 'Please select valid start and end dates.');
+      return;
+    }
+
+    const finalFacility = facilityName === 'OTHER' ? customFacility || 'अन्य परिसंपत्ति' : facilityName;
+
+    // Check for duplicate / overlapping bookings
+    const matchingBooking = bookingList.find((b) => {
+      const sameFacility = b.facilityName === finalFacility;
+      const sameFamily = b.familyId === selectedFamily.id || (selectedFamily.samagraId && b.samagraId === selectedFamily.samagraId);
+      const overlappingDates =
+        (startDate >= b.startDate && startDate <= b.endDate) ||
+        (endDate >= b.startDate && endDate <= b.endDate) ||
+        (startDate <= b.startDate && endDate >= b.endDate);
+      return (sameFacility && overlappingDates) || (sameFamily && overlappingDates);
+    });
+
+    if (matchingBooking) {
+      setDuplicateModalInfo({
+        title: isHindi ? 'समान बुकिंग प्रविष्टि चेतावनी (Duplicate Booking Warning)' : 'Duplicate Booking Warning',
+        message: isHindi
+          ? `चेतावनी: इस परिसर (${finalFacility}) या हितग्राही (${matchingBooking.beneficiaryName}) हेतु दिनांक ${formatDateDDMMYYYY(matchingBooking.startDate)} से ${formatDateDDMMYYYY(matchingBooking.endDate)} की अवधि में पहले से बुकिंग वाउचर (${matchingBooking.voucherNo}) दर्ज है।`
+          : `Warning: An existing booking (${matchingBooking.voucherNo}) already exists for this facility/beneficiary on matching dates.`,
+        duplicateInfo: [
+          { label: isHindi ? 'मौजूदा वाउचर क्र.' : 'Existing Voucher No', value: matchingBooking.voucherNo },
+          { label: isHindi ? 'हितग्राही का नाम' : 'Beneficiary', value: matchingBooking.beneficiaryName },
+          { label: isHindi ? 'परिसंपत्ति' : 'Facility', value: matchingBooking.facilityName },
+          { label: isHindi ? 'दर्ज बुकिंग अवधि' : 'Dates', value: `${formatDateDDMMYYYY(matchingBooking.startDate)} से ${formatDateDDMMYYYY(matchingBooking.endDate)}` },
+        ],
+        onConfirm: () => {
+          setDuplicateModalInfo(null);
+          executeSaveBooking();
+        },
+        onCancel: () => {
+          setDuplicateModalInfo(null);
+        },
+        isHindi,
+      });
+      return;
+    }
+
+    executeSaveBooking();
   };
 
   // Filtered booking records list
@@ -1016,6 +1085,34 @@ export const BookingRentView: React.FC<BookingRentViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Duplicate Warning Modal with User Confirmation */}
+      {duplicateModalInfo && (
+        <DuplicateWarningModal
+          isOpen={true}
+          title={duplicateModalInfo.title}
+          message={duplicateModalInfo.message}
+          duplicateInfo={duplicateModalInfo.duplicateInfo}
+          onConfirm={duplicateModalInfo.onConfirm}
+          onCancel={duplicateModalInfo.onCancel}
+          isHindi={isHindi}
+        />
+      )}
+
+      {/* Success Popup Modal */}
+      {successModalInfo && (
+        <SuccessPopupModal
+          isOpen={true}
+          title={successModalInfo.title}
+          message={successModalInfo.message}
+          recordType={successModalInfo.recordType}
+          details={successModalInfo.details}
+          printButtonLabel={successModalInfo.printButtonLabel}
+          onPrint={successModalInfo.onPrint}
+          onClose={successModalInfo.onClose}
+          isHindi={isHindi}
+        />
       )}
     </div>
   );

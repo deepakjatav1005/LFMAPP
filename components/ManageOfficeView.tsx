@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { OfficeDetails, Admin } from '../types';
 import ViewHeader from './ViewHeader';
+import OfficialVoucherHeader from './OfficialVoucherHeader';
 
 interface ManageOfficeViewProps {
   officeDetails: OfficeDetails;
-  onUpdateOfficeDetails: (updated: OfficeDetails) => void;
+  onUpdateOfficeDetails: (updated: OfficeDetails) => Promise<{ success: boolean; error?: string } | void> | void;
   admin: Admin | null;
   onBack?: () => void;
   onClose?: () => void;
@@ -21,6 +22,8 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
 }) => {
   const [formData, setFormData] = useState<OfficeDetails>({ ...officeDetails });
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [savedSummary, setSavedSummary] = useState<OfficeDetails | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [upiIdInput, setUpiIdInput] = useState<string>('grampanchayat@sbi');
 
   useEffect(() => {
@@ -82,11 +85,18 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateOfficeDetails(formData);
-    setSuccessMsg(isHindi ? 'कार्यालय विवरण एवं बैंक / लोगो जानकारी सफलतापूर्वक सुरक्षित कर दी गई!' : 'Office details & bank / logo information saved successfully!');
-    setTimeout(() => setSuccessMsg(null), 4000);
+    setIsSaving(true);
+    try {
+      await onUpdateOfficeDetails(formData);
+      setSavedSummary({ ...formData });
+      setSuccessMsg(isHindi ? 'कार्यालय विवरण एवं बैंक / लोगो जानकारी Supabase डेटाबेस (office_details) में सफलतापूर्वक सुरक्षित एवं अपडेट कर दी गई!' : 'Office details & bank / logo information successfully updated and saved to Supabase database (office_details)!');
+    } catch (err: any) {
+      alert(isHindi ? 'डेटाबेस में सुरक्षित करने में त्रुटि आई।' : 'Error saving to database.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -99,10 +109,46 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
         isHindi={isHindi}
       />
 
-      {successMsg && (
-        <div className="mb-6 bg-emerald-50 border-2 border-emerald-300 text-emerald-950 p-4 rounded-2xl flex items-center gap-3 animate-slide-up shadow-md">
-          <span className="text-2xl">✅</span>
-          <span className="text-sm font-black">{successMsg}</span>
+      {successMsg && savedSummary && (
+        <div className="mb-6 bg-emerald-50 border-2 border-emerald-400 text-emerald-950 p-5 rounded-2xl animate-slide-up shadow-md space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">✅</span>
+              <h4 className="text-sm sm:text-base font-black text-emerald-900">{successMsg}</h4>
+            </div>
+            <button
+              onClick={() => {
+                setSuccessMsg(null);
+                setSavedSummary(null);
+              }}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 px-2 py-1 bg-emerald-100 rounded-lg"
+            >
+              ✕ बंद करें
+            </button>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-xl border border-emerald-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="text-slate-500 font-bold block">कार्यालय नाम:</span>
+              <strong className="text-emerald-950 font-black">{savedSummary.officeName || '-'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">सचिव का नाम:</span>
+              <strong className="text-slate-900 font-bold">{savedSummary.secretaryName || '-'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">संपर्क मोबाइल:</span>
+              <strong className="text-slate-900 font-mono">{savedSummary.contactPhone || '-'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">बैंक खाता (A/C):</span>
+              <strong className="text-slate-900 font-mono">{savedSummary.bankName} ({savedSummary.accountNumber})</strong>
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-emerald-800 font-bold pt-1">
+            <span>💾 डेटाबेस टेबल: <strong className="font-mono bg-emerald-100 px-2 py-0.5 rounded">office_details</strong></span>
+            <span>⚡ स्थिति: <strong className="text-emerald-700">सफलतापूर्वक सिंक एवं एक्टिव</strong></span>
+          </div>
         </div>
       )}
 
@@ -127,7 +173,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <input
                   type="text"
                   name="officeName"
-                  value={formData.officeName}
+                  value={formData.officeName || ''}
                   onChange={handleInputChange}
                   placeholder="e.g. कार्यालय ग्राम पंचायत रामपुर"
                   className="w-full px-3.5 py-2.5 text-sm font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
@@ -142,7 +188,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <input
                   type="text"
                   name="secretaryName"
-                  value={formData.secretaryName}
+                  value={formData.secretaryName || ''}
                   onChange={handleInputChange}
                   placeholder={isHindi ? 'जैसे श्री दीपक जाटव' : 'e.g. Deepak Jatav'}
                   className="w-full px-3.5 py-2 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
@@ -190,7 +236,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <input
                   type="text"
                   name="contactPhone"
-                  value={formData.contactPhone}
+                  value={formData.contactPhone || ''}
                   onChange={handleInputChange}
                   placeholder="e.g. 911234567890"
                   className="w-full px-3.5 py-2 text-sm font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
@@ -219,7 +265,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <textarea
                   name="address"
                   rows={2}
-                  value={formData.address}
+                  value={formData.address || ''}
                   onChange={handleInputChange}
                   placeholder="e.g. मुख्य बस स्टैंड रोड, ग्राम पंचायत रामपुर, जनपद पंचायत सीहोर"
                   className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
@@ -234,7 +280,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <input
                   type="text"
                   name="block"
-                  value={formData.block}
+                  value={formData.block || ''}
                   onChange={handleInputChange}
                   className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
                   required
@@ -248,7 +294,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                 <input
                   type="text"
                   name="district"
-                  value={formData.district}
+                  value={formData.district || ''}
                   onChange={handleInputChange}
                   className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary"
                   required
@@ -312,7 +358,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                   <input
                     type="text"
                     name="bankName"
-                    value={formData.bankName}
+                    value={formData.bankName || ''}
                     onChange={handleInputChange}
                     placeholder="e.g. भारतीय स्टेट बैंक (SBI)"
                     className="w-full px-3.5 py-2 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary bg-white"
@@ -327,7 +373,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                   <input
                     type="text"
                     name="accountName"
-                    value={formData.accountName}
+                    value={formData.accountName || ''}
                     onChange={handleInputChange}
                     placeholder="e.g. ग्राम पंचायत रामपुर निधि खाता"
                     className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary bg-white"
@@ -342,7 +388,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                   <input
                     type="text"
                     name="accountNumber"
-                    value={formData.accountNumber}
+                    value={formData.accountNumber || ''}
                     onChange={handleInputChange}
                     placeholder="e.g. 38291048291"
                     className="w-full px-3.5 py-2 text-sm font-mono font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary bg-white text-emerald-800"
@@ -357,7 +403,7 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
                   <input
                     type="text"
                     name="ifscCode"
-                    value={formData.ifscCode}
+                    value={formData.ifscCode || ''}
                     onChange={handleInputChange}
                     placeholder="e.g. SBIN0001234"
                     className="w-full px-3.5 py-2 text-sm font-mono font-bold uppercase border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary bg-white"
@@ -461,10 +507,15 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
             <div className="pt-4 border-t border-slate-200 flex justify-end">
               <button
                 type="submit"
-                className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-xl shadow-lg transition-all transform hover:scale-[1.01] cursor-pointer flex items-center gap-2"
+                disabled={isSaving}
+                className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-black text-sm rounded-xl shadow-lg transition-all transform hover:scale-[1.01] cursor-pointer flex items-center gap-2"
               >
-                <span>💾</span>
-                <span>{isHindi ? 'कार्यालय विवरण एवं बैंक प्रोफाइल सेव करें' : 'Save Office & Bank Profile'}</span>
+                <span>{isSaving ? '⏳' : '💾'}</span>
+                <span>
+                  {isSaving
+                    ? (isHindi ? 'डेटाबेस में सुरक्षित हो रहा है...' : 'Saving to Database...')
+                    : (isHindi ? 'कार्यालय विवरण एवं बैंक प्रोफाइल सेव करें' : 'Save Office & Bank Profile')}
+                </span>
               </button>
             </div>
           </form>
@@ -488,21 +539,13 @@ export const ManageOfficeView: React.FC<ManageOfficeViewProps> = ({
 
             {/* MOCK OFFICIAL HEADER CARD */}
             <div className="bg-white text-slate-900 p-4 rounded-xl space-y-4 border-2 border-slate-300 font-sans shadow-inner">
-              <div className="text-center border-b pb-3 border-slate-200 space-y-1">
-                {formData.logoUrl && (
-                  <img src={formData.logoUrl} alt="Logo" className="w-12 h-12 mx-auto object-contain mb-1" />
-                )}
-                <p className="text-[10px] font-extrabold uppercase text-slate-500">कार्यालय ग्राम पंचायत</p>
-                <h4 className="text-base font-black text-slate-900 leading-tight">
-                  {formData.officeName || 'ग्राम पंचायत नाम'}
-                </h4>
-                <p className="text-[10px] text-slate-600 font-medium">
-                  {formData.address || 'कार्यालय पता'}
-                </p>
-                <p className="text-[9px] text-slate-500 font-mono">
-                  जनपद: {formData.block} | जिला: {formData.district} | मो: {formData.contactPhone}
-                </p>
-              </div>
+              <OfficialVoucherHeader
+                officeDetails={formData}
+                admin={admin}
+                adminPanchayat={formData.gramPanchayat || admin?.gramPanchayat}
+                voucherTitle="डिजिटल कर रसीद एवं मांग नोटिस प्रपत्र"
+                badgeBgColor="bg-amber-50 text-amber-950 border-amber-300"
+              />
 
               {/* BANK & QR FOOTER PREVIEW */}
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[10px] space-y-1">

@@ -1,11 +1,15 @@
 export enum TaxType {
   WATER = 'Water Tax (जल कर)',
   SANITATION = 'Sanitation Tax (स्वच्छता कर)',
-  LIGHT = 'Light Tax (प्रकाश कर)',
-  PROPERTY = 'Property Tax (संपत्ति कर)',
-  HATBAZAR = 'Hatbazar Tax (हाट-बाजार कर)',
-  ROYALTY = 'Royalty Tax (रॉयल्टी कर)',
-  OTHER = 'Other Tax (अन्य कर)',
+}
+
+export enum OtherTaxCategory {
+  LIGHT = 'प्रकाश कर (Light Tax)',
+  PROPERTY = 'संपत्ति कर (Property Tax)',
+  COMMERCIAL_SHOP = 'व्यावसायिक दुकान / संस्थान कर (Commercial Shop & Business Tax)',
+  HATBAZAR = 'हाट-बाजार कर (Hatbazar / Bazaar Tax)',
+  ROYALTY = 'रॉयल्टी कर (Royalty Tax)',
+  OTHER = 'अन्य विविध कर (Other / Misc Tax)',
 }
 
 export enum BeneficiaryCategory {
@@ -103,6 +107,8 @@ export interface Admin {
   id: string;
   name: string;
   mobile: string;
+  photoUrl?: string;
+  avatar?: string;
   designation?: string;
   gramPanchayat: string;
   block?: string;
@@ -138,12 +144,47 @@ export enum Page {
   BUILDING_PERMISSION = 'BUILDING_PERMISSION',
   TAX_REPORT = 'TAX_REPORT',
   MEMBER_CARD = 'MEMBER_CARD',
+  OTHER_TAX = 'OTHER_TAX',
+  BUSINESS_REGISTRATION = 'BUSINESS_REGISTRATION',
   CASHBOOK_MANAGEMENT = 'CASHBOOK_MANAGEMENT',
   FAMILY_DETAILS = 'FAMILY_DETAILS',
   REGISTER_FAMILY = 'REGISTER_FAMILY',
   DEVELOPER_PORTAL = 'DEVELOPER_PORTAL',
   COMPLAINTS_SUGGESTIONS = 'COMPLAINTS_SUGGESTIONS',
   SUBSCRIPTIONS = 'SUBSCRIPTIONS',
+}
+
+export interface BusinessRegistrationRecord {
+  id: string;
+  certificateNo: string; // e.g. GP-BRC/2026-27/001
+  familyId?: string;
+  memberId?: string; // 9-digit Samagra Member ID
+  ownerName: string; // स्वामी / संचालक का नाम
+  guardianName?: string; // पिता / पति का नाम
+  mobile: string;
+  wardNo: string;
+  muhalla?: string;
+  samagraFamilyId?: string; // 8-digit Family ID
+  samagraMemberId?: string; // 9-digit Member ID
+  category?: string; // APL / BPL / General / OBC / SC / ST
+  
+  // Business Specific Details
+  businessName: string; // व्यावसायिक प्रतिष्ठान / दुकान / संस्थान का नाम
+  businessType: string; // व्यवसाय का प्रकार (e.g. किराना, कपड़ा, इलेक्ट्रॉनिक्स, हार्डवेयर, होटल, सेवा केंद्र, आदि)
+  shopAddress: string; // दुकान / संस्थान का पूरा पता एवं स्थान
+  shopAreaSqFt: number; // दुकान / संस्थान का क्षेत्रफल (वर्ग फीट में)
+  shopTotalCost?: number; // दुकान / संस्थान की कुल लागत / अनुमानित मूल्य (₹)
+  annualTaxRate?: number; // वार्षिक निर्धारित व्यावसायिक कर राशि (₹)
+  gstNumber?: string; // GST / व्यापार अनुज्ञप्ति / उद्यम क्रमांक (Optional)
+  photoUrl?: string; // मालिक / संचालक का पासपोर्ट साइज फोटो या दुकान का फोटो
+  
+  registrationDate: string; // YYYY-MM-DD
+  validUpto?: string; // e.g. 31-03-2027
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  remarks?: string;
+  createdAt: string;
+  gramPanchayat?: string;
+  adminId?: string;
 }
 
 export interface BookingRentRecord {
@@ -199,6 +240,35 @@ export interface BuildingPermissionRecord {
   transactionId?: string;
   validUpto?: string; // वैधता अवधि (e.g. 1 वर्ष / 2027-03-31)
   issueDate?: string;
+  remarks?: string;
+  createdAt: string;
+  cashbookVoucherId?: string;
+  gramPanchayat?: string;
+  adminId?: string;
+}
+
+export interface OtherTaxReceiptRecord {
+  id: string;
+  receiptNo: string; // e.g. OTR-2026-0001
+  familyId?: string;
+  beneficiaryName: string;
+  guardianName?: string;
+  fatherHusbandName?: string;
+  mobile?: string;
+  wardNo?: string;
+  muhalla?: string;
+  samagraId?: string;
+  familySamagraId?: string;
+  category?: string;
+  taxHead: string; // e.g. प्रकाश कर (Light Tax), संपत्ति कर (Property Tax), हाट-बाजार कर (Hatbazar Tax), रॉयल्टी कर (Royalty Tax), अन्य कर (Other Tax)
+  taxAmount: number; // कर राशि (₹)
+  receiptDate: string; // YYYY-MM-DD
+  financialYear?: string; // e.g. "2026-2027" or "2026-27"
+  businessRegistrationId?: string;
+  businessName?: string;
+  paymentMode: 'CASH' | 'BANK' | 'UPI' | 'CHEQUE';
+  transactionId?: string;
+  collectorName?: string; // कर संग्राहक / लिपिक का नाम
   remarks?: string;
   createdAt: string;
   cashbookVoucherId?: string;
@@ -277,6 +347,14 @@ export interface CashbookVoucher {
   workId?: string;
   paymentMode: 'CASH' | 'BANK' | 'UPI' | 'CHEQUE';
   remarks: string;
+  proposalNo?: string;
+  proposalDate?: string;
+  billNo?: string;
+  billDate?: string;
+  workSanctionAmount?: number;
+  previousExpendedAmount?: number;
+  remainingAmount?: number;
+  expenseCategory?: 'WORK' | 'OFFICE';
   gramPanchayat?: string;
   adminId?: string;
 }
@@ -299,8 +377,10 @@ export interface OfficeDetails {
   accountName: string;
   accountNumber: string;
   ifscCode: string;
+  branchName?: string;
   logoUrl?: string;
   qrCodeUrl?: string;
+  adminId?: string;
 }
 
 export interface DemandNoticeRecord {
@@ -322,6 +402,7 @@ export enum DeveloperTab {
 }
 
 export interface DeveloperProfile {
+  id?: string;
   name: string; // Hemlata Jatav
   company: string; // Chanchal Net Zone
   email: string; // chanchalnetzone2026@gmail.com
@@ -329,6 +410,11 @@ export interface DeveloperProfile {
   version: string; // v3.0 Multi-Tenant Pro
   supportHours: string;
   address: string;
+  logoUrl?: string;
+  avatarUrl?: string;
+  qrCodeUrl?: string;
+  upiId?: string;
+  updatedAt?: string;
 }
 
 export interface Subscription {

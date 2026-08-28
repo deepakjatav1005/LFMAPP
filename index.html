@@ -1,31 +1,97 @@
 <!DOCTYPE html>
-<html lang="en" class="theme-teal"> <!-- Default theme -->
+<html lang="en" class="theme-blue"> <!-- Default Blue & Black/White Dynamic Theme -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Local Fund Management - स्थानीय वित्तीय प्रबंधन</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Subtle background pattern */
+      /* Subtle crisp soft-blue background pattern */
       body {
-        background-color: #f8fafc; /* bg-slate-50 */
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e2e8f0' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        background-color: #f0f6ff; /* Soft ice-blue background */
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2393c5fd' fill-opacity='0.18'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        color: #020617;
       }
-      /* Theme Definitions */
-      .theme-teal {
-        --color-primary-50: 240 253 250;
-        --color-primary-100: 204 251 241;
-        --color-primary-200: 153 246 228;
-        --color-primary-300: 94 234 212;
-        --color-primary-400: 45 212 191;
-        --color-primary-500: 20 184 166;
-        --color-primary-600: 13 148 136;
-        --color-primary-700: 15 118 110;
-        --color-primary-800: 17 94 89;
-        --color-primary-900: 19 78 74;
-        --color-primary-950: 4 47 46;
+
+      /* Global Dark Bold High-Contrast Text Legibility */
+      body, input, select, textarea, button {
+        font-family: 'Noto Sans Devanagari', 'Yantramanav', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
       }
-      .theme-indigo {
+
+      h1, h2, h3, h4, h5, h6 {
+        color: #020617 !important;
+        font-weight: 800 !important;
+      }
+      th {
+        color: #020617 !important;
+        font-weight: 800 !important;
+      }
+      label {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+      }
+      input, select, textarea {
+        color: #020617 !important;
+        font-weight: 600 !important;
+      }
+
+      /* Darkening and strengthening muted / faded text across all pages */
+      .text-slate-400, .text-gray-400, .text-zinc-400, .text-neutral-400 {
+        color: #475569 !important;
+        font-weight: 600 !important;
+      }
+      .text-slate-500, .text-gray-500, .text-zinc-500, .text-neutral-500 {
+        color: #334155 !important;
+        font-weight: 600 !important;
+      }
+      .text-slate-600, .text-gray-600, .text-zinc-600, .text-neutral-600 {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+      }
+      .text-slate-700, .text-gray-700, .text-zinc-700, .text-neutral-700 {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+      }
+      .text-slate-800, .text-gray-800, .text-zinc-800, .text-neutral-800 {
+        color: #020617 !important;
+        font-weight: 800 !important;
+      }
+      .text-slate-900, .text-gray-900, .text-zinc-900, .text-neutral-900 {
+        color: #000000 !important;
+        font-weight: 900 !important;
+      }
+
+      /* Pure White & Blue Clean Dynamic Theme Definitions */
+      .theme-blue, :root {
+        --color-primary-50: 239 246 255;
+        --color-primary-100: 219 234 254;
+        --color-primary-200: 191 219 254;
+        --color-primary-300: 147 197 253;
+        --color-primary-400: 96 165 250;
+        --color-primary-500: 37 99 235;
+        --color-primary-600: 29 78 216;
+        --color-primary-700: 30 64 175;
+        --color-primary-800: 30 58 138;
+        --color-primary-900: 23 37 84;
+        --color-primary-950: 15 23 42;
+      }
+      .theme-navy {
+        --color-primary-50: 240 249 255;
+        --color-primary-100: 224 242 254;
+        --color-primary-200: 186 230 253;
+        --color-primary-300: 125 211 252;
+        --color-primary-400: 56 189 248;
+        --color-primary-500: 14 165 233;
+        --color-primary-600: 2 132 199;
+        --color-primary-700: 3 105 161;
+        --color-primary-800: 7 89 133;
+        --color-primary-900: 12 74 110;
+        --color-primary-950: 8 47 73;
+      }
+      .theme-cobalt {
         --color-primary-50: 238 242 255;
         --color-primary-100: 224 231 255;
         --color-primary-200: 199 210 254;
@@ -38,32 +104,91 @@
         --color-primary-900: 49 46 129;
         --color-primary-950: 30 27 75;
       }
-      .theme-emerald {
-        --color-primary-50: 236 253 245;
-        --color-primary-100: 209 250 229;
-        --color-primary-200: 167 243 208;
-        --color-primary-300: 110 231 183;
-        --color-primary-400: 52 211 153;
-        --color-primary-500: 16 185 129;
-        --color-primary-600: 5 150 105;
-        --color-primary-700: 4 120 87;
-        --color-primary-800: 6 95 70;
-        --color-primary-900: 6 78 59;
-        --color-primary-950: 2 44 34;
+      .theme-sky {
+        --color-primary-50: 240 253 250;
+        --color-primary-100: 204 251 241;
+        --color-primary-200: 153 246 228;
+        --color-primary-300: 94 234 212;
+        --color-primary-400: 45 212 191;
+        --color-primary-500: 20 184 166;
+        --color-primary-600: 13 148 136;
+        --color-primary-700: 15 118 110;
+        --color-primary-800: 17 94 89;
+        --color-primary-900: 19 78 74;
+        --color-primary-950: 4 47 46;
+      }
+
+      /* Explicit Primary Theme Utility Classes */
+      .bg-primary {
+        background-color: rgb(var(--color-primary-600)) !important;
+      }
+      .bg-primary-50 {
+        background-color: rgb(var(--color-primary-50)) !important;
+      }
+      .bg-primary-100 {
+        background-color: rgb(var(--color-primary-100)) !important;
+      }
+      .bg-primary-200 {
+        background-color: rgb(var(--color-primary-200)) !important;
+      }
+      .bg-primary-600 {
+        background-color: rgb(var(--color-primary-600)) !important;
+      }
+      .bg-primary-700 {
+        background-color: rgb(var(--color-primary-700)) !important;
+      }
+      .bg-primary-800 {
+        background-color: rgb(var(--color-primary-800)) !important;
+      }
+      .text-primary {
+        color: rgb(var(--color-primary-600)) !important;
+      }
+      .text-primary-700 {
+        color: rgb(var(--color-primary-700)) !important;
+      }
+      .text-primary-800 {
+        color: rgb(var(--color-primary-800)) !important;
+      }
+      .text-primary-900 {
+        color: rgb(var(--color-primary-900)) !important;
+      }
+      .border-primary {
+        border-color: rgb(var(--color-primary-500)) !important;
+      }
+      .border-primary-200 {
+        border-color: rgb(var(--color-primary-200)) !important;
+      }
+      .border-primary-300 {
+        border-color: rgb(var(--color-primary-300)) !important;
+      }
+      .border-primary-500 {
+        border-color: rgb(var(--color-primary-500)) !important;
+      }
+      .border-primary-600 {
+        border-color: rgb(var(--color-primary-600)) !important;
+      }
+      .ring-primary:focus, .focus\:ring-primary:focus {
+        --tw-ring-color: rgb(var(--color-primary-500)) !important;
       }
       /* Custom print styles for printing cards, receipts & reports */
       @media print {
         @page {
-          size: A4 portrait;
-          margin: 10mm;
+          size: auto;
+          margin: 4mm 6mm;
+        }
+        @page landscape {
+          size: A4 landscape;
+          margin: 2mm 3mm;
         }
 
         *, *:before, *:after {
-          box-shadow: none !important;
-          text-shadow: none !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          box-sizing: border-box !important;
         }
 
-        html, body, #root, main, div#root > div {
+        html, body, #root, main {
           background: #ffffff !important;
           color: #000000 !important;
           margin: 0 !important;
@@ -77,52 +202,74 @@
         }
 
         /* Hide layout chrome, sidebar, header, footers, navigation, buttons, controls */
-        header, footer, nav, aside, button, input, select, textarea, .print\:hidden {
+        header, footer, nav, aside, button, input:not([type="checkbox"]), select, textarea, .print\:hidden, .no-print, [class*="no-print"] {
           display: none !important;
           visibility: hidden !important;
         }
 
-        /* Override dark modal overlays during print so they don't produce a dark background */
-        div[class*="fixed"], div[class*="absolute"], div[class*="backdrop"], div[class*="bg-slate-900"], div[class*="bg-black"], div[class*="overflow-y-auto"] {
+        /* Modal backdrop reset without interfering with certificate internals */
+        body > div > div.fixed, body > div > div.backdrop-blur-md, div[class*="backdrop-blur"] {
           position: static !important;
-          overflow: visible !important;
-          height: auto !important;
-          max-height: none !important;
-          width: 100% !important;
-          max-width: none !important;
-          background: #ffffff !important;
-          background-color: #ffffff !important;
-          box-shadow: none !important;
-          backdrop-filter: none !important;
+          background: transparent !important;
+          background-color: transparent !important;
           padding: 0 !important;
           margin: 0 !important;
+          box-shadow: none !important;
           border: none !important;
+          width: 100% !important;
+          max-width: none !important;
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
         }
 
         /* Printable containers rendering rules */
-        #printable-area, #receipt-print-area, .printable-area {
+        #printable-area, #receipt-print-area, .printable-area, #printable-business-certificate, .printable-certificate {
           display: block !important;
           visibility: visible !important;
           position: relative !important;
           width: 100% !important;
-          max-width: 100% !important;
           margin: 0 auto !important;
-          padding: 10px !important;
-          border: 1px solid #000000 !important;
-          background: #ffffff !important;
-          color: #000000 !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
         }
 
-        /* Force table text and borders to print sharply */
-        table {
+        .printable-landscape, .certificate-landscape, #printable-business-certificate, [data-orientation="landscape"] {
+          page: landscape !important;
+          max-width: 292mm !important;
+          width: 100% !important;
+        }
+
+        #printable-business-certificate {
+          max-width: 290mm !important;
+          width: 100% !important;
+          height: auto !important;
+          margin: 0 auto !important;
+          padding: 1.5mm 2.5mm !important;
+          box-sizing: border-box !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          page-break-before: avoid !important;
+          break-before: avoid !important;
+          overflow: visible !important;
+        }
+
+        #printable-business-certificate * {
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Force table text and borders only for data report tables, not styled certificates */
+        .printable-report table, .report-table table, table.data-table {
           width: 100% !important;
           border-collapse: collapse !important;
           font-size: 11px !important;
         }
 
-        th, td {
+        .printable-report th, .printable-report td, .report-table th, .report-table td, table.data-table th, table.data-table td {
           border: 1px solid #000000 !important;
           padding: 5px 8px !important;
           color: #000000 !important;
@@ -162,18 +309,18 @@
           extend: {
             colors: {
               primary: {
-                DEFAULT: '#0d9488',
-                '50': '#f0fdfa',
-                '100': '#ccfbf1',
-                '200': '#99f6e4',
-                '300': '#5eead4',
-                '400': '#2dd4bf',
-                '500': '#14b8a6',
-                '600': '#0d9488',
-                '700': '#0f766e',
-                '800': '#115e59',
-                '900': '#134e4a',
-                '950': '#042f2e',
+                DEFAULT: withOpacity('--color-primary-600'),
+                '50': withOpacity('--color-primary-50'),
+                '100': withOpacity('--color-primary-100'),
+                '200': withOpacity('--color-primary-200'),
+                '300': withOpacity('--color-primary-300'),
+                '400': withOpacity('--color-primary-400'),
+                '500': withOpacity('--color-primary-500'),
+                '600': withOpacity('--color-primary-600'),
+                '700': withOpacity('--color-primary-700'),
+                '800': withOpacity('--color-primary-800'),
+                '900': withOpacity('--color-primary-900'),
+                '950': withOpacity('--color-primary-950'),
               },
             },
             fontFamily: {

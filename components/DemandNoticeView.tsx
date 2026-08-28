@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Family, Tax, OfficeDetails, Admin, TaxType } from '../types';
 import ViewHeader from './ViewHeader';
+import OfficialVoucherHeader from './OfficialVoucherHeader';
 import { getCleanOfficeTitle, triggerPrint, formatDateDDMMYYYY, getOfficeLogoUrl } from '../utils/printUtils';
 
 interface DemandNoticeViewProps {
@@ -255,6 +256,7 @@ export const DemandNoticeView: React.FC<DemandNoticeViewProps> = ({
                   pendingTaxes={pendingList}
                   totalPendingAmount={totalAmt}
                   officeDetails={officeDetails}
+                  adminPanchayat={admin?.gramPanchayat}
                   serialNo={serialNo}
                   issueDate={issueDateInput}
                   dueDate={dueDateInput}
@@ -278,6 +280,7 @@ export const DemandNoticeView: React.FC<DemandNoticeViewProps> = ({
               pendingTaxes={pendingTaxes}
               totalPendingAmount={totalPendingAmount}
               officeDetails={officeDetails}
+              adminPanchayat={admin?.gramPanchayat}
               serialNo={serialNoInput}
               issueDate={issueDateInput}
               dueDate={dueDateInput}
@@ -299,6 +302,7 @@ interface DemandNoticeDocumentProps {
   pendingTaxes: Tax[];
   totalPendingAmount: number;
   officeDetails: OfficeDetails;
+  adminPanchayat?: string;
   serialNo: string;
   issueDate: string;
   dueDate: string;
@@ -313,6 +317,7 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
   pendingTaxes,
   totalPendingAmount,
   officeDetails,
+  adminPanchayat,
   serialNo,
   issueDate,
   dueDate,
@@ -322,91 +327,49 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
   isHindi,
 }) => {
   return (
-    <div id="printable-area" className="printable-area bg-white p-8 sm:p-10 rounded-2xl shadow-xl border-2 border-slate-300 max-w-4xl mx-auto space-y-6 text-slate-900 font-serif print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none page-break-after-always">
-      {/* 1. OFFICIAL LETTERHEAD HEADER */}
-      <div className="border-b-2 border-slate-900 pb-4 text-center relative">
-        <div className="flex items-center justify-between gap-4">
-          {/* Left: Office Logo */}
-          <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-            <img
-              src={getOfficeLogoUrl(officeDetails?.logoUrl)}
-              alt="Logo"
-              className="max-h-20 max-w-20 object-contain drop-shadow-xs"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                if (!target.src.includes('data:image/svg+xml')) {
-                  target.src = getOfficeLogoUrl(undefined);
-                }
-              }}
-            />
-          </div>
+    <div id="printable-area" className="printable-area bg-white p-6 sm:p-8 rounded-2xl shadow-xl border-2 border-dashed border-amber-300 max-w-3xl mx-auto space-y-5 text-slate-900 font-sans print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none page-break-inside-avoid page-break-after-always">
+      {/* 1. STANDARDIZED OFFICIAL VOUCHER HEADER (MATCHING RECEIPT PAGE) */}
+      <OfficialVoucherHeader
+        officeDetails={officeDetails}
+        adminPanchayat={officeDetails?.gramPanchayat || adminPanchayat}
+        voucherTitle="बकाया कर मांग नोटिस प्रपत्र (OFFICIAL TAX DEMAND NOTICE VOUCHER)"
+        badgeBgColor="bg-amber-50 text-amber-950 border-amber-300"
+      />
 
-          {/* Center: Gram Panchayat Office Details */}
-          <div className="flex-1 space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
-              {getCleanOfficeTitle(officeDetails, officeDetails.gramPanchayat)}
-            </h1>
-            <p className="text-xs font-sans text-slate-700 font-semibold">
-              {officeDetails.address || 'ग्राम पंचायत भवन, मध्य प्रदेश'}
-            </p>
-            <p className="text-[11px] font-sans text-slate-600">
-              जनपद पंचायत: <strong>{officeDetails.block || officeDetails.gramPanchayat}</strong> | जिला: <strong>{officeDetails.district || officeDetails.gramPanchayat} ({officeDetails.state || 'म.प्र.'})</strong> | मो: <strong>{officeDetails.contactPhone}</strong>
-            </p>
-          </div>
-
-          {/* Right: Payment QR Code if available */}
-          <div className="w-20 h-20 shrink-0 flex flex-col items-center justify-center text-center">
-            {officeDetails.qrCodeUrl ? (
-              <img src={officeDetails.qrCodeUrl} alt="UPI QR" className="w-16 h-16 border border-slate-300 rounded p-0.5" />
-            ) : (
-              <div className="w-16 h-16 bg-slate-50 border border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400 font-sans">
-                [ QR Code ]
-              </div>
-            )}
-            <span className="text-[8px] font-sans font-bold text-slate-500 mt-0.5">UPI Pay</span>
-          </div>
+      {/* 2. DISPATCH METADATA & ISSUE DATE BAR */}
+      <div className="flex flex-wrap justify-between items-center text-xs text-slate-700 border-b pb-3 border-slate-200 font-mono gap-2">
+        <div>
+          <span className="font-bold text-slate-800">प्रेषण क्रमांक (Dispatch No):</span>{' '}
+          <strong className="text-amber-900 text-sm font-black underline">{serialNo}</strong>
         </div>
-
-        {/* Dispatch Serial No & Issue Date Bar */}
-        <div className="mt-4 pt-2 border-t border-slate-300 flex flex-wrap justify-between items-center text-xs font-sans font-bold text-slate-800">
-          <div>
-            <span>प्रेषण क्रमांक (Dispatch No):</span>{' '}
-            <strong className="text-slate-950 font-mono text-sm underline">{serialNo}</strong>
-          </div>
-          <div>
-            <span>दिनांक (Issue Date):</span>{' '}
-            <strong className="text-slate-950 font-mono text-sm">{formatDateDDMMYYYY(issueDate)}</strong>
-          </div>
+        <div>
+          <span className="font-bold text-slate-800">नोटिस दिनांक (Issue Date):</span>{' '}
+          <strong className="text-slate-900">{formatDateDDMMYYYY(issueDate)}</strong>
         </div>
       </div>
 
-      {/* 2. NOTICE SUBJECT HEADING */}
-      <div className="text-center py-2 bg-slate-100 border-y-2 border-slate-800 my-2">
-        <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-wide uppercase">
-          {isHindi ? '॥ बकाया कर भुगतान हेतु आधिकारिक मांग नोटिस ॥' : 'OFFICIAL DEMAND NOTICE FOR PENDING TAXES'}
-        </h2>
-        <p className="text-xs font-sans font-bold text-slate-700 mt-0.5">
-          (म.प्र. पंचायत राज एवं ग्राम स्वराज अधिनियम के अंतर्गत जारी)
-        </p>
-      </div>
-
-      {/* 3. BENEFICIARY TAXPAYER DETAILS BOX */}
-      <div className="bg-slate-50 border-2 border-slate-300 p-4 rounded-xl text-xs font-sans space-y-2">
-        <p className="font-extrabold text-slate-900 text-sm border-b pb-1 border-slate-200 uppercase tracking-wider">
-          प्रति (To, Taxpayer Beneficiary):
-        </p>
+      {/* 3. BENEFICIARY TAXPAYER DETAILS BOX (MATCHING RECEIPT DESIGN) */}
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
+        <div className="flex items-center justify-between border-b pb-1.5 border-slate-200">
+          <p className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">
+            प्रति (To, Taxpayer Beneficiary):
+          </p>
+          <span className="bg-amber-100 text-amber-950 border border-amber-300 font-bold px-2 py-0.5 rounded text-[10px]">
+            श्रेणी: {family.category || 'APL'}
+          </span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-800">
           <div>
-            <span className="text-slate-500">करदाता का नाम:</span>{' '}
-            <strong className="text-slate-950 text-sm font-black">{family.name} {family.surname}</strong>
+            <span className="text-slate-500">करदाता / मुखिया का नाम:</span>{' '}
+            <strong className="text-slate-950 font-black">{family.name} {family.surname}</strong>
           </div>
           <div>
             <span className="text-slate-500">पिता/पति का नाम:</span>{' '}
-            <strong className="text-slate-900">{family.guardianName || 'N/A'}</strong>
+            <strong className="text-slate-900">{family.guardianName || (family as any)?.fatherHusbandName || 'N/A'}</strong>
           </div>
           <div>
-            <span className="text-slate-500">समग्र आईडी (Samagra ID):</span>{' '}
-            <strong className="text-slate-900 font-mono text-sm">{family.samagraId}</strong>
+            <span className="text-slate-500">समग्र सदस्य आईडी (Samagra ID):</span>{' '}
+            <strong className="text-slate-900 font-mono">{family.samagraId}</strong>
           </div>
           <div>
             <span className="text-slate-500">परिवार आईडी (Family ID):</span>{' '}
@@ -418,60 +381,60 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
           </div>
           <div>
             <span className="text-slate-500">संपर्क मोबाइल:</span>{' '}
-            <strong className="font-mono">{family.mobile}</strong> | श्रेणी: <strong>{family.category || 'APL'}</strong> | पंजीयन: <strong>{formatDateDDMMYYYY(family.registrationDate) || 'N/A'}</strong>
+            <strong className="font-mono">{family.mobile}</strong>
           </div>
         </div>
       </div>
 
-      {/* 4. OFFICIAL NOTICE STATEMENT ON BEHALF OF SECRETARY */}
-      <div className="text-xs sm:text-sm leading-relaxed text-slate-800 space-y-2 text-justify font-sans">
-        <p>
-          <strong>महोदय / महोदया,</strong>
+      {/* 4. OFFICIAL NOTICE STATEMENT */}
+      <div className="text-xs leading-relaxed text-slate-800 space-y-1 text-justify font-sans bg-amber-50/50 border border-amber-200/60 p-3 rounded-xl">
+        <p className="font-bold text-slate-900">
+          महोदय / महोदया,
         </p>
         <p>
-          <strong>{getCleanOfficeTitle(officeDetails, officeDetails.gramPanchayat)}</strong> द्वारा आपको सूचित किया जाता है कि ग्राम पंचायत अभिलेखानुसार आपके नाम पर निम्नलिखित विवरण के अनुसार विभिन्न करों (संपत्ति कर, जल कर, प्रकाश कर, स्वच्छता कर आदि) की कर राशि बकाया लंबित है:
+          <strong>{getCleanOfficeTitle(officeDetails, officeDetails.gramPanchayat)}</strong> अभिलेखानुसार आपके नाम पर निम्नलिखित विवरण के अनुसार विभिन्न करों (संपत्ति कर, जल कर, प्रकाश कर, स्वच्छता कर आदि) की राशि बकाया लंबित है। कृपया निर्धारित अंतिम तिथि से पूर्व कर राशि का भुगतान सुनिश्चित करें:
         </p>
       </div>
 
-      {/* 5. ITEMIZED TAX DUES TABLE */}
-      <div className="overflow-x-auto font-sans">
-        <table className="min-w-full text-xs border-2 border-slate-900 divide-y divide-slate-800">
-          <thead className="bg-slate-200 font-black text-slate-900 uppercase">
+      {/* 5. ITEMIZED TAX DUES BREAKDOWN TABLE */}
+      <div className="border border-slate-300 rounded-xl overflow-hidden text-xs">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-100 font-bold text-slate-800 uppercase">
             <tr>
-              <th className="p-2 border-r border-slate-800 text-center w-12">क्र.</th>
-              <th className="p-2 border-r border-slate-800 text-left">कर का प्रकार (Tax Type)</th>
-              <th className="p-2 border-r border-slate-800 text-center">माह एवं वर्ष (Month / Year)</th>
-              <th className="p-2 text-right">देय बकाया राशि (₹)</th>
+              <th className="px-3 py-2 text-center w-12 border-r border-slate-200">क्र.</th>
+              <th className="px-3 py-2 text-left border-r border-slate-200">कर का प्रकार (Tax Type)</th>
+              <th className="px-3 py-2 text-center border-r border-slate-200">मांग अवधि (Charged Period)</th>
+              <th className="px-3 py-2 text-right">देय बकाया राशि (₹)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-300 font-medium">
+          <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
             {pendingTaxes.length > 0 ? (
               pendingTaxes.map((tax, idx) => (
                 <tr key={tax.id} className="hover:bg-slate-50">
-                  <td className="p-2 border-r border-slate-300 text-center font-mono font-bold">{idx + 1}</td>
-                  <td className="p-2 border-r border-slate-300 font-bold text-slate-900">{tax.type}</td>
-                  <td className="p-2 border-r border-slate-300 text-center font-mono">
+                  <td className="px-3 py-2 text-center font-mono font-bold border-r border-slate-100">{idx + 1}</td>
+                  <td className="px-3 py-2 border-r border-slate-100 font-bold text-slate-900">{tax.type}</td>
+                  <td className="px-3 py-2 text-center font-mono border-r border-slate-100">
                     {monthNames[tax.month - 1] || tax.month}, {tax.year}
                   </td>
-                  <td className="p-2 text-right font-mono font-bold text-slate-950 text-sm">
+                  <td className="px-3 py-2 text-right font-mono font-bold text-slate-950">
                     ₹{tax.amount.toLocaleString('en-IN')}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="p-4 text-center text-slate-500 font-bold">
+                <td colSpan={4} className="px-3 py-4 text-center text-slate-500 font-bold">
                   इस करदाता का कोई पुराना बकाया लंबित नहीं है।
                 </td>
               </tr>
             )}
           </tbody>
-          <tfoot className="bg-slate-100 font-black border-t-2 border-slate-900 text-slate-950">
+          <tfoot className="bg-amber-50/80 font-black border-t-2 border-amber-300 text-slate-950">
             <tr>
-              <td colSpan={3} className="p-2.5 text-right uppercase border-r border-slate-800 text-sm">
-                कुल देय बकाया कर राशि (Total Dues Amount):
+              <td colSpan={3} className="px-3 py-2.5 text-right uppercase border-r border-amber-200 text-xs sm:text-sm">
+                कुल देय बकाया कर राशि (Total Outstanding Dues):
               </td>
-              <td className="p-2.5 text-right font-mono text-base text-rose-900 underline">
+              <td className="px-3 py-2.5 text-right font-mono text-sm sm:text-base text-amber-950 underline">
                 ₹{totalPendingAmount.toLocaleString('en-IN')}
               </td>
             </tr>
@@ -480,20 +443,22 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
       </div>
 
       {/* 6. AMOUNT IN WORDS & PAYMENT DEADLINE DIRECTIVE */}
-      <div className="bg-amber-50 border-2 border-amber-300 p-3.5 rounded-xl text-xs font-sans space-y-1.5">
+      <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-xs space-y-1.5">
         <p className="font-bold text-amber-950">
           बकाया राशि शब्दों में: <span className="text-slate-900 font-extrabold underline">{numberToWords(totalPendingAmount)}</span>
         </p>
-        <p className="font-extrabold text-rose-900 text-sm">
-          ⚠️ भुगतान की अंतिम तिथि (Payment Deadline): <span className="underline font-mono">{formatDateDDMMYYYY(dueDate)}</span> (तक अनिवार्य रूप से जमा करें)
+        <p className="font-extrabold text-rose-900 text-xs sm:text-sm">
+          ⚠️ भुगतान की अंतिम तिथि (Payment Due Date): <span className="underline font-mono">{formatDateDDMMYYYY(dueDate)}</span> (तक अनिवार्य रूप से जमा करें)
         </p>
-        <p className="text-amber-900 text-[11px] italic">
-          नोट: {remarks}
-        </p>
+        {remarks && (
+          <p className="text-amber-900 text-[11px] italic">
+            निर्देश: {remarks}
+          </p>
+        )}
       </div>
 
       {/* 7. PAYMENT OPTIONS & BANK ACCOUNT DETAILS */}
-      <div className="border-2 border-slate-300 p-3.5 rounded-xl text-xs font-sans bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <p className="font-extrabold text-slate-900 uppercase border-b pb-1 mb-1 text-[11px]">
             🏦 बैंक खाते में सीधे कर भुगतान हेतु विवरण:
@@ -504,9 +469,9 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
           <p>IFSC कोड: <strong className="font-mono">{officeDetails.ifscCode}</strong></p>
         </div>
 
-        <div className="flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-300 pt-2 md:pt-0 md:pl-3">
+        <div className="flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-3">
           {officeDetails.qrCodeUrl && (
-            <img src={officeDetails.qrCodeUrl} alt="UPI QR" className="w-16 h-16 object-contain border border-slate-300 bg-white rounded p-1" />
+            <img src={officeDetails.qrCodeUrl} alt="UPI QR" className="w-14 h-14 object-contain border border-slate-300 bg-white rounded p-1" />
           )}
           <div className="text-[11px] text-slate-700">
             <p className="font-bold text-slate-900">📱 UPI / QR Code द्वारा ऑनलाइन भुगतान:</p>
@@ -515,33 +480,33 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
         </div>
       </div>
 
-      {/* 8. OFFICIAL SIGNATURES & STAMP FOOTER */}
-      <div className="pt-8 border-t-2 border-slate-900 flex justify-between items-end text-xs font-sans text-slate-800">
+      {/* 8. OFFICIAL SIGNATURES & STAMP FOOTER (MATCHING RECEIPT FORMAT) */}
+      <div className="pt-6 border-t border-slate-300 flex justify-between items-end text-xs text-slate-800">
         {/* Left: Panchayat Seal Stamp Box */}
         <div className="text-center">
-          <div className="w-24 h-24 border-2 border-dashed border-slate-400 rounded-2xl flex flex-col items-center justify-center text-[10px] text-slate-400 bg-slate-50 font-mono">
+          <div className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-[9px] text-slate-400 bg-slate-50 font-mono">
             <span>[ कार्यालय मुहर ]</span>
-            <span className="text-[8px] mt-1 text-slate-500">Panchayat Stamp</span>
+            <span className="text-[8px] mt-0.5 text-slate-500">Panchayat Stamp</span>
           </div>
-          <span className="block mt-1 font-bold text-slate-700 text-[11px]">ग्राम पंचायत सील</span>
+          <span className="block mt-1 font-bold text-slate-700 text-[10px]">ग्राम पंचायत सील</span>
         </div>
 
         {/* Center: Sarpanch Sign */}
-        <div className="text-center space-y-8">
-          <div className="border-b border-slate-400 w-36 mx-auto"></div>
+        <div className="text-center space-y-6">
+          <div className="border-b border-slate-300 w-32 mx-auto"></div>
           <div>
-            <p className="font-bold text-slate-900">{officeDetails.sarpanchName || 'सरपंच'}</p>
-            <p className="text-[10px] text-slate-600">ग्राम पंचायत सरपंच</p>
+            <p className="font-bold text-slate-900 text-xs">{officeDetails.sarpanchName || 'सरपंच'}</p>
+            <p className="text-[10px] text-slate-500">ग्राम पंचायत सरपंच</p>
           </div>
         </div>
 
         {/* Right: Secretary Sign */}
-        <div className="text-center space-y-8">
-          <div className="border-b-2 border-slate-900 w-48 mx-auto"></div>
+        <div className="text-center space-y-6">
+          <div className="border-b-2 border-slate-800 w-44 mx-auto"></div>
           <div>
-            <p className="font-black text-slate-950 text-sm">{officeDetails.secretaryName || 'श्री दीपक जाटव'}</p>
-            <p className="font-extrabold text-slate-900 text-xs">ग्राम पंचायत सचिव / आदेशानुसार</p>
-            <p className="text-[10px] text-slate-600">{officeDetails.officeName || 'ग्राम पंचायत'}</p>
+            <p className="font-black text-slate-950 text-xs">{officeDetails.secretaryName || 'ग्राम पंचायत सचिव'}</p>
+            <p className="font-extrabold text-slate-900 text-[10px]">ग्राम पंचायत सचिव / आदेशानुसार</p>
+            <p className="text-[9px] text-slate-500">{officeDetails.officeName || 'ग्राम पंचायत'}</p>
           </div>
         </div>
       </div>

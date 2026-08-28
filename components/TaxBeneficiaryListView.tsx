@@ -184,12 +184,24 @@ export const TaxBeneficiaryListView: React.FC<TaxBeneficiaryListViewProps> = ({
     }
   };
 
-  // EXCEL EXPORT FUNCTION
+  // EXCEL EXPORT FUNCTION (ONLY INCLUDED BENEFICIARIES ON THIS TAX LIST)
   const handleExportExcel = () => {
+    const includedOnlyFamilies = filteredFamilies.filter((fam) =>
+      currentList.includedFamilyIds.includes(fam.id)
+    );
+
+    if (includedOnlyFamilies.length === 0) {
+      alert(
+        isHindi
+          ? `⚠️ ${selectedTaxType} की सूची में कोई भी शामिल (Included) हितग्राही नहीं है।`
+          : `⚠️ No included beneficiaries found for ${selectedTaxType}.`
+      );
+      return;
+    }
+
     const headers = [
       isHindi ? 'क्रम संख्या' : 'S.No',
       isHindi ? 'कर प्रकार' : 'Tax Type',
-      isHindi ? 'स्थिति' : 'Status',
       isHindi ? 'हितग्राही का नाम' : 'Beneficiary Name',
       isHindi ? 'पिता/पति का नाम' : 'Guardian Name',
       isHindi ? 'समग्र आईडी' : 'Samagra ID',
@@ -201,14 +213,12 @@ export const TaxBeneficiaryListView: React.FC<TaxBeneficiaryListViewProps> = ({
       isHindi ? 'मोबाइल' : 'Mobile',
     ];
 
-    const rows = filteredFamilies.map((fam, index) => {
-      const isInc = currentList.includedFamilyIds.includes(fam.id);
+    const rows = includedOnlyFamilies.map((fam, index) => {
       return [
         index + 1,
         selectedTaxType,
-        isInc ? (isHindi ? 'शामिल (INCLUDED)' : 'INCLUDED') : (isHindi ? 'पृथक (EXCLUDED)' : 'EXCLUDED'),
         `${fam.name} ${fam.surname}`,
-        fam.guardianName || '-',
+        fam.guardianName || fam.fatherHusbandName || '-',
         fam.samagraId || '-',
         fam.familyId || '-',
         formatDateDDMMYYYY(fam.registrationDate) || '-',
@@ -220,33 +230,49 @@ export const TaxBeneficiaryListView: React.FC<TaxBeneficiaryListViewProps> = ({
     });
 
     exportToExcel(
-      `${selectedTaxType}_Beneficiary_List_${new Date().toISOString().slice(0, 10)}`,
+      `${selectedTaxType}_Included_Beneficiary_List_${new Date().toISOString().slice(0, 10)}`,
       selectedTaxType,
       headers,
       rows
     );
 
-    showNotification(isHindi ? 'Excel फ़ाइल सफलतापूर्वक डाउनलोड की गई!' : 'Excel file downloaded successfully!');
+    showNotification(
+      isHindi
+        ? `✅ ${selectedTaxType} के कुल ${includedOnlyFamilies.length} शामिल हितग्राहियों की Excel सूची डाउनलोड की गई!`
+        : `Excel file downloaded for ${includedOnlyFamilies.length} included beneficiaries!`
+    );
   };
 
-  // PDF EXPORT FUNCTION
+  // PDF EXPORT FUNCTION (ONLY INCLUDED BENEFICIARIES ON THIS TAX LIST)
   const handleExportPDF = () => {
+    const includedOnlyFamilies = filteredFamilies.filter((fam) =>
+      currentList.includedFamilyIds.includes(fam.id)
+    );
+
+    if (includedOnlyFamilies.length === 0) {
+      alert(
+        isHindi
+          ? `⚠️ ${selectedTaxType} की सूची में कोई भी शामिल (Included) हितग्राही नहीं है।`
+          : `⚠️ No included beneficiaries found for ${selectedTaxType}.`
+      );
+      return;
+    }
+
     const headers = [
       isHindi ? 'क्र.' : 'S.N',
-      isHindi ? 'स्थिति' : 'Status',
-      isHindi ? 'हितग्राही नाम' : 'Name',
+      isHindi ? 'हितग्राही का नाम' : 'Beneficiary Name',
+      isHindi ? 'पिता / पति का नाम' : 'Guardian Name',
       isHindi ? 'समग्र आईडी' : 'Samagra ID',
       isHindi ? 'श्रेणी' : 'Cat.',
       isHindi ? 'वार्ड व मोहल्ला' : 'Ward & Muhalla',
       isHindi ? 'मोबाइल' : 'Mobile',
     ];
 
-    const rows = filteredFamilies.map((fam, index) => {
-      const isInc = currentList.includedFamilyIds.includes(fam.id);
+    const rows = includedOnlyFamilies.map((fam, index) => {
       return [
         index + 1,
-        isInc ? (isHindi ? 'शामिल' : 'INCLUDED') : (isHindi ? 'पृथक' : 'EXCLUDED'),
         `${fam.name} ${fam.surname}`,
+        fam.guardianName || fam.fatherHusbandName || '-',
         fam.samagraId || '-',
         fam.category || 'APL',
         `W-${fam.wardNo || '01'}, ${fam.muhalla || '-'}`,
@@ -255,12 +281,12 @@ export const TaxBeneficiaryListView: React.FC<TaxBeneficiaryListViewProps> = ({
     });
 
     const title = isHindi
-      ? `${selectedTaxType} - करवार पृथक लाभार्थी सूची (${currentList.isLocked ? 'लॉक' : 'अनलॉक'})`
+      ? `${selectedTaxType} - पात्र करदाता हितग्राही सूची (${currentList.isLocked ? '🔒 लॉक' : '🔓 अनलॉक'})`
       : `${selectedTaxType} Tax Beneficiary List (${currentList.isLocked ? 'Locked' : 'Unlocked'})`;
 
     const subtitle = isHindi
-      ? `कुल पंजीकृत परिवार: ${families.length} | इस कर हेतु चयनित: ${includedCount} | पृथक: ${excludedCount}`
-      : `Total Registered Families: ${families.length} | Included: ${includedCount} | Excluded: ${excludedCount}`;
+      ? `कुल शामिल पात्र हितग्राही: ${includedOnlyFamilies.length} | संबंधित कर: ${selectedTaxType}`
+      : `Total Included Beneficiaries: ${includedOnlyFamilies.length} | Tax: ${selectedTaxType}`;
 
     exportToPDF(
       `${selectedTaxType}_Tax_Beneficiaries`,
@@ -271,7 +297,11 @@ export const TaxBeneficiaryListView: React.FC<TaxBeneficiaryListViewProps> = ({
       isHindi ? 'कार्यालय ग्राम पंचायत' : 'Office Gram Panchayat'
     );
 
-    showNotification(isHindi ? 'PDF रिपोर्ट सफलतापूर्वक डाउनलोड की गई!' : 'PDF report downloaded successfully!');
+    showNotification(
+      isHindi
+        ? `✅ ${selectedTaxType} के कुल ${includedOnlyFamilies.length} शामिल हितग्राहियों की PDF सूची डाउनलोड की गई!`
+        : `PDF report downloaded for ${includedOnlyFamilies.length} included beneficiaries!`
+    );
   };
 
   return (

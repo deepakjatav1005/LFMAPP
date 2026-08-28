@@ -50,6 +50,7 @@ export const AdminRegistrationView: React.FC<AdminRegistrationViewProps> = ({
   const [officerName, setOfficerName] = useState<string>('');
   const [mobile, setMobile] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const designation = isHindi ? 'ग्राम पंचायत सचिव' : 'Gram Panchayat Secretary';
   const [email, setEmail] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -346,14 +347,24 @@ export const AdminRegistrationView: React.FC<AdminRegistrationViewProps> = ({
                 <label className="block text-xs font-bold text-slate-800 uppercase mb-1">
                   {isHindi ? 'लॉगिन पासवर्ड' : 'Login Password'} <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="Password"
-                  className="w-full px-3.5 py-2.5 text-xs font-mono font-bold border border-slate-300 rounded-xl bg-white text-slate-900 focus:border-emerald-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="Password"
+                    className="w-full px-3.5 py-2.5 pr-10 text-xs font-mono font-bold border border-slate-300 rounded-xl bg-white text-slate-900 focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-sm p-1 cursor-pointer"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
             </div>
 
