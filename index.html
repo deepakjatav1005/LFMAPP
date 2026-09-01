@@ -13,7 +13,7 @@
         color: #020617;
       }
 
-      /* Global Dark Bold High-Contrast Text Legibility */
+      /* Global High-Contrast Text Legibility */
       body, input, select, textarea, button {
         font-family: 'Noto Sans Devanagari', 'Yantramanav', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -22,46 +22,17 @@
       }
 
       h1, h2, h3, h4, h5, h6 {
-        color: #020617 !important;
-        font-weight: 800 !important;
+        font-weight: 800;
       }
       th {
-        color: #020617 !important;
-        font-weight: 800 !important;
+        font-weight: 800;
       }
       label {
-        color: #0f172a !important;
-        font-weight: 700 !important;
-      }
-      input, select, textarea {
-        color: #020617 !important;
-        font-weight: 600 !important;
+        font-weight: 700;
       }
 
-      /* Darkening and strengthening muted / faded text across all pages */
-      .text-slate-400, .text-gray-400, .text-zinc-400, .text-neutral-400 {
-        color: #475569 !important;
-        font-weight: 600 !important;
-      }
-      .text-slate-500, .text-gray-500, .text-zinc-500, .text-neutral-500 {
-        color: #334155 !important;
-        font-weight: 600 !important;
-      }
-      .text-slate-600, .text-gray-600, .text-zinc-600, .text-neutral-600 {
-        color: #1e293b !important;
-        font-weight: 600 !important;
-      }
-      .text-slate-700, .text-gray-700, .text-zinc-700, .text-neutral-700 {
-        color: #0f172a !important;
-        font-weight: 700 !important;
-      }
-      .text-slate-800, .text-gray-800, .text-zinc-800, .text-neutral-800 {
-        color: #020617 !important;
-        font-weight: 800 !important;
-      }
-      .text-slate-900, .text-gray-900, .text-zinc-900, .text-neutral-900 {
-        color: #000000 !important;
-        font-weight: 900 !important;
+      .text-white {
+        color: #ffffff !important;
       }
 
       /* Pure White & Blue Clean Dynamic Theme Definitions */
@@ -170,6 +141,20 @@
       .ring-primary:focus, .focus\:ring-primary:focus {
         --tw-ring-color: rgb(var(--color-primary-500)) !important;
       }
+      @media screen {
+        #gp-print-portal {
+          display: none !important;
+          position: absolute !important;
+          left: -99999px !important;
+          top: -99999px !important;
+          width: 0 !important;
+          height: 0 !important;
+          overflow: hidden !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+        }
+      }
+
       /* Custom print styles for printing cards, receipts & reports */
       @media print {
         @page {
@@ -188,6 +173,11 @@
           box-sizing: border-box !important;
         }
 
+        body:has(#gp-print-portal:not(:empty)) > *:not(#gp-print-portal) {
+          display: none !important;
+          visibility: hidden !important;
+        }
+
         html, body, #root, main {
           background: #ffffff !important;
           color: #000000 !important;
@@ -199,6 +189,25 @@
           overflow: visible !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+        }
+
+        #gp-print-portal {
+          display: block !important;
+          visibility: visible !important;
+          position: static !important;
+          width: 100% !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          box-shadow: none !important;
+          border: none !important;
+          overflow: visible !important;
+        }
+
+        #gp-print-portal * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
 
         /* Hide layout chrome, sidebar, header, footers, navigation, buttons, controls */
@@ -224,7 +233,7 @@
         }
 
         /* Printable containers rendering rules */
-        #printable-area, #receipt-print-area, .printable-area, #printable-business-certificate, .printable-certificate {
+        #printable-area, #printable-voucher-slip, #printable-payment-notesheet, #printable-cashbook-register, #printable-cashbook-ledger, #printable-works-expenditure-report, #printable-work-breakdown-modal, #printable-taxpayers-report, #printable-member-card, #receipt-print-area, #demand-notice-printable-area, .demand-notice-card, .printable-area, #printable-business-certificate, .printable-certificate {
           display: block !important;
           visibility: visible !important;
           position: relative !important;
@@ -232,6 +241,34 @@
           margin: 0 auto !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
+        }
+
+        .demand-notice-card {
+          display: block !important;
+          visibility: visible !important;
+          background-color: #ffffff !important;
+          border: 2px solid #0f172a !important;
+          border-radius: 12px !important;
+          padding: 16px 20px !important;
+          margin-bottom: 20px !important;
+          box-shadow: none !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+
+        .demand-notice-card table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+        }
+
+        .demand-notice-card th, .demand-notice-card td {
+          border: 1px solid #cbd5e1 !important;
+        }
+
+        .demand-notice-card th {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+          font-weight: 800 !important;
         }
 
         .printable-landscape, .certificate-landscape, #printable-business-certificate, [data-orientation="landscape"] {
@@ -260,6 +297,37 @@
           overflow: visible !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+        }
+
+        /* Explicit 2-column landscape grid & metadata strip rules for printing */
+        #printable-business-certificate .grid-cols-12, 
+        #printable-business-certificate [class*="grid-cols-12"], 
+        #printable-business-certificate [class*="md:grid-cols-12"] {
+          display: grid !important;
+          grid-template-columns: 7fr 5fr !important;
+          gap: 8px !important;
+        }
+        #printable-business-certificate [class*="md:col-span-7"], 
+        #printable-business-certificate [class*="col-span-7"] {
+          grid-column: span 1 !important;
+        }
+        #printable-business-certificate [class*="md:col-span-5"], 
+        #printable-business-certificate [class*="col-span-5"] {
+          grid-column: span 1 !important;
+        }
+        #printable-business-certificate [class*="sm:grid-cols-4"], 
+        #printable-business-certificate [class*="grid-cols-4"] {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 6px !important;
+        }
+        #printable-business-certificate [class*="hidden md:flex"], 
+        #printable-business-certificate [class*="md:flex"] {
+          display: flex !important;
+        }
+        #printable-business-certificate [class*="grid-cols-2"] {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         }
 
         /* Force table text and borders only for data report tables, not styled certificates */

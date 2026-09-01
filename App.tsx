@@ -2242,7 +2242,7 @@ const App: React.FC = () => {
     const fyTaxes = taxes.filter(t => isInFinancialYear(`${t.year}-${String(t.month).padStart(2, '0')}-01`, String(fy.startYear)));
 
     // Use all current gram panchayat registered families
-    const targetFamilies = currentFamilies.length > 0 ? currentFamilies : families;
+    const targetFamilies = loggedInAdmin ? currentFamilies : families;
 
     taxTypes.forEach((type) => {
       const listConfig = taxBeneficiaryLists[type];
@@ -4829,9 +4829,9 @@ const App: React.FC = () => {
             activeCashbookTab={cashbookTab}
             setCurrentPage={(page, tab) => handleNavigate(page, tab)}
             onLogout={handleLogout}
-            beneficiaryCount={families.length}
-            pendingTaxesCount={taxes.length}
-            receiptsCount={payments.length}
+            beneficiaryCount={currentFamilies.length}
+            pendingTaxesCount={currentTaxes.length}
+            receiptsCount={currentPayments.length}
             isMobileOpen={isMobileSidebarOpen}
             setIsMobileOpen={setIsMobileSidebarOpen}
             isHindi={isHindi}

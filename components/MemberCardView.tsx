@@ -18,6 +18,8 @@ import {
   formatCurrency,
   getMonthName,
   triggerPrint,
+  downloadElementAsPDF,
+  openInStandaloneTab,
   DEFAULT_OFFICE_LOGO,
 } from '../utils/printUtils';
 
@@ -195,8 +197,15 @@ export const MemberCardView: React.FC<MemberCardViewProps> = ({
   };
 
   const handlePrintCard = () => {
+    if (!selectedFamily) {
+      alert(isHindi ? 'कृपया पहले किसी हितग्राही सदस्य का चयन करें।' : 'Please select a beneficiary member first.');
+      return;
+    }
     try {
-      triggerPrint('printable-area');
+      triggerPrint('printable-member-card', {
+        orientation: 'portrait',
+        title: `MemberCard_${selectedFamily.name}_${selectedFamily.samagraId}`
+      });
     } catch (err) {
       console.error('Print member card failed:', err);
     }
@@ -248,11 +257,43 @@ export const MemberCardView: React.FC<MemberCardViewProps> = ({
             )}
 
             <button
+              type="button"
+              onClick={async () => {
+                if (!selectedFamily) {
+                  alert(isHindi ? 'कृपया पहले किसी हितग्राही सदस्य का चयन करें।' : 'Please select a member first.');
+                  return;
+                }
+                await downloadElementAsPDF('printable-member-card', `MemberCard_${selectedFamily.name}_${selectedFamily.samagraId}`, 'portrait');
+              }}
+              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>📥</span>
+              <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!selectedFamily) {
+                  alert(isHindi ? 'कृपया पहले किसी हितग्राही सदस्य का चयन करें।' : 'Please select a member first.');
+                  return;
+                }
+                openInStandaloneTab('printable-member-card', `MemberCard_${selectedFamily.name}_${selectedFamily.samagraId}`, 'portrait');
+              }}
+              className="px-3.5 py-2 bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+            >
+              <span>↗️</span>
+              <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handlePrintCard}
               className="px-4 py-2 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>🖨️</span>
-              <span>{isHindi ? 'सदस्य कार्ड प्रिंट करें' : 'Print Member Card'}</span>
+              <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Card'}</span>
             </button>
           </div>
         }
@@ -448,7 +489,7 @@ export const MemberCardView: React.FC<MemberCardViewProps> = ({
 
           {/* ---------------- OFFICIAL PRINTABLE MEMBER CARD & LEDGER ---------------- */}
           <div
-            id="printable-area"
+            id="printable-member-card"
             className="p-6 sm:p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-900 space-y-6"
           >
             {/* STANDARDIZED OFFICIAL GRAM PANCHAYAT BRANDING HEADER */}

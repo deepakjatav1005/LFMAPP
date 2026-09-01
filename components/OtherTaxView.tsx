@@ -8,6 +8,7 @@ import {
   getCleanOfficeSubtitle,
   getOfficeLogoUrl,
   DEFAULT_OFFICE_LOGO,
+  openPrintWindow,
 } from '../utils/printUtils';
 import {
   DuplicateWarningModal,
@@ -429,12 +430,6 @@ export const OtherTaxView: React.FC<OtherTaxViewProps> = ({
 
   // Print Single Receipt Document
   const handlePrintSingleReceiptDocument = (r: OtherTaxReceiptRecord) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('कृपया पॉप-अप की अनुमति दें (Please allow pop-ups).');
-      return;
-    }
-
     const officeTitle = getCleanOfficeTitle(officeDetails, admin?.gramPanchayat);
     const officeSubtitle = getCleanOfficeSubtitle(officeDetails, admin);
     const logoUrl = getOfficeLogoUrl(officeDetails);
@@ -446,161 +441,143 @@ export const OtherTaxView: React.FC<OtherTaxViewProps> = ({
     const rFY = r.financialYear || fyInfo.fyShort;
     const isAnnualTax = isPropertyTaxHead(r.taxHead) || isCommercialShopTaxHead(r.taxHead);
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="hi">
-      <head>
-        <meta charset="UTF-8">
-        <title>कर रसीद - ${r.receiptNo}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-          * { font-family: 'Noto Sans Devanagari', 'Plus Jakarta Sans', system-ui, sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          @page { size: A4 portrait; margin: 12mm; }
-          @media print { body { margin: 0; background: #fff; } .no-print { display: none !important; } }
-        </style>
-      </head>
-      <body class="bg-slate-100 text-slate-900 p-6 min-h-screen">
-        <div class="no-print max-w-3xl mx-auto mb-6 p-4 bg-white rounded-xl shadow border border-slate-200 flex items-center justify-between">
-          <div>
-            <h2 class="font-bold text-slate-800 text-base">📄 कर रसीद पूर्वावलोकन (Tax Receipt Preview)</h2>
-            <p class="text-xs text-slate-500 font-mono">रसीद क्रमांक: ${r.receiptNo} | वित्तीय वर्ष: ${rFY}</p>
+    const bodyHtml = `
+      <div class="no-print max-w-3xl mx-auto mb-6 p-4 bg-white rounded-xl shadow border border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 class="font-bold text-slate-800 text-base">📄 कर रसीद पूर्वावलोकन (Tax Receipt Preview)</h2>
+          <p class="text-xs text-slate-500 font-mono">रसीद क्रमांक: ${r.receiptNo} | वित्तीय वर्ष: ${rFY}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-lg shadow flex items-center gap-2 cursor-pointer">
+            🖨️ प्रिंट करें / PDF सेव करें (Print / Save)
+          </button>
+          <button onclick="window.close()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-lg">
+            बंद करें (Close)
+          </button>
+        </div>
+      </div>
+
+      <div class="max-w-3xl mx-auto bg-white border-2 border-slate-900 rounded-2xl p-7 shadow-lg">
+        <!-- Standard Official Header Banner -->
+        <div class="border-b-2 border-slate-900 pb-4 mb-4 text-center space-y-1.5">
+          <div class="flex justify-center mb-1">
+            <img
+              src="${logoUrl}"
+              alt="Emblem"
+              referrerpolicy="no-referrer"
+              class="w-16 h-16 object-contain mx-auto drop-shadow-xs"
+              onerror="this.onerror=null;this.src='${DEFAULT_OFFICE_LOGO}';"
+            />
           </div>
-          <div class="flex items-center gap-3">
-            <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-lg shadow flex items-center gap-2 cursor-pointer">
-              🖨️ प्रिंट करें / PDF सेव करें (Print / Save)
-            </button>
-            <button onclick="window.close()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-lg">
-              बंद करें (Close)
-            </button>
+          <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight">
+            ${officeTitle}
+          </h1>
+          <p class="text-xs font-semibold text-slate-700 max-w-xl mx-auto">
+            ${officeSubtitle}
+          </p>
+          <div class="pt-1">
+            <div class="inline-block border border-emerald-300 bg-emerald-50 text-emerald-950 font-black text-xs px-4 py-1 rounded-full uppercase shadow-xs">
+              अधिकृत कर भुगतान रसीद • वित्तीय वर्ष: ${fyInfo.fyCode} (${rFY})
+            </div>
           </div>
         </div>
 
-        <div class="max-w-3xl mx-auto bg-white border-2 border-slate-900 rounded-2xl p-7 shadow-lg">
-          <!-- Standard Official Header Banner -->
-          <div class="border-b-2 border-slate-900 pb-4 mb-4 text-center space-y-1.5">
-            <div class="flex justify-center mb-1">
-              <img
-                src="${logoUrl}"
-                alt="Emblem"
-                referrerpolicy="no-referrer"
-                class="w-16 h-16 object-contain mx-auto drop-shadow-xs"
-                onerror="this.onerror=null;this.src='${DEFAULT_OFFICE_LOGO}';"
-              />
-            </div>
-            <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight">
-              ${officeTitle}
-            </h1>
-            <p class="text-xs font-semibold text-slate-700 max-w-xl mx-auto">
-              ${officeSubtitle}
-            </p>
-            <div class="pt-1">
-              <div class="inline-block border border-emerald-300 bg-emerald-50 text-emerald-950 font-black text-xs px-4 py-1 rounded-full uppercase shadow-xs">
-                अधिकृत कर भुगतान रसीद • वित्तीय वर्ष: ${fyInfo.fyCode} (${rFY})
-              </div>
-            </div>
+        <!-- Metadata Grid -->
+        <div class="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 grid grid-cols-3 gap-4 text-xs mb-4">
+          <div>
+            <span class="text-slate-500">रसीद क्रमांक (Receipt No):</span>
+            <div class="text-sm font-black text-emerald-950 font-mono">${r.receiptNo}</div>
           </div>
+          <div class="text-center">
+            <span class="text-slate-500">वित्तीय वर्ष (Financial Year):</span>
+            <div class="text-sm font-black text-emerald-900 font-mono">FY ${rFY}</div>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-500">रसीद दिनांक (Receipt Date):</span>
+            <div class="text-sm font-black text-slate-900 font-mono">${dateFormatted}</div>
+          </div>
+        </div>
 
-          <!-- Metadata Grid -->
-          <div class="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 grid grid-cols-3 gap-4 text-xs mb-4">
+        <!-- Beneficiary Details -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 text-xs space-y-2">
+          <div class="flex justify-between border-b border-slate-200 pb-2">
             <div>
-              <span class="text-slate-500">रसीद क्रमांक (Receipt No):</span>
-              <div class="text-sm font-black text-emerald-950 font-mono">${r.receiptNo}</div>
-            </div>
-            <div class="text-center">
-              <span class="text-slate-500">वित्तीय वर्ष (Financial Year):</span>
-              <div class="text-sm font-black text-emerald-900 font-mono">FY ${rFY}</div>
+              <span class="text-slate-500 text-[11px]">करदाता / हितग्राही का नाम (Taxpayer Name):</span>
+              <div class="text-base font-black text-slate-900">${r.beneficiaryName}</div>
+              <div class="text-slate-600 font-medium">पिता / पति का नाम: <strong>${r.guardianName || r.fatherHusbandName || '-'}</strong></div>
             </div>
             <div class="text-right">
-              <span class="text-slate-500">रसीद दिनांक (Receipt Date):</span>
-              <div class="text-sm font-black text-slate-900 font-mono">${dateFormatted}</div>
+              <span class="px-2.5 py-1 bg-white border border-slate-300 rounded font-bold text-slate-700 text-[11px]">
+                श्रेणी: ${r.category || 'APL'}
+              </span>
             </div>
           </div>
 
-          <!-- Beneficiary Details -->
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 text-xs space-y-2">
-            <div class="flex justify-between border-b border-slate-200 pb-2">
-              <div>
-                <span class="text-slate-500 text-[11px]">करदाता / हितग्राही का नाम (Taxpayer Name):</span>
-                <div class="text-base font-black text-slate-900">${r.beneficiaryName}</div>
-                <div class="text-slate-600 font-medium">पिता / पति का नाम: <strong>${r.guardianName || r.fatherHusbandName || '-'}</strong></div>
-              </div>
-              <div class="text-right">
-                <span class="px-2.5 py-1 bg-white border border-slate-300 rounded font-bold text-slate-700 text-[11px]">
-                  श्रेणी: ${r.category || 'APL'}
-                </span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 pt-1 text-slate-700">
-              <div>समग्र आईडी: <strong class="font-mono text-slate-900">${r.samagraId || '-'}</strong></div>
-              <div>वार्ड क्रमांक: <strong class="text-slate-900">वार्ड ${r.wardNo || '01'}</strong></div>
-              <div>मोहल्ला: <strong class="text-emerald-900">${r.muhalla || '-'}</strong></div>
-              <div>मोबाइल: <strong class="font-mono text-slate-900">${r.mobile || '-'}</strong></div>
-              <div>भुगतान माध्यम: <strong class="text-slate-900">${r.paymentMode}</strong></div>
-              <div>ट्रांजेक्शन / चेक क्र: <strong class="font-mono text-slate-900">${r.transactionId || '-'}</strong></div>
-            </div>
-          </div>
-
-          <!-- Tax Receipt Statement Table -->
-          <table class="w-full text-xs border-collapse border border-slate-300 mb-4">
-            <thead>
-              <tr class="bg-emerald-800 text-white font-bold">
-                <th class="p-2.5 text-left border border-slate-300">विवरण / कर मद (Tax Head Description)</th>
-                <th class="p-2.5 text-center border border-slate-300 w-32">कर अवधि / वि.व.</th>
-                <th class="p-2.5 text-right border border-slate-300 w-40">प्राप्त राशि (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="p-3 border border-slate-300">
-                  <div class="font-black text-slate-900 text-sm">${r.taxHead}</div>
-                  <div class="text-[11px] text-slate-500 mt-0.5">${r.remarks ? `टिप्पणी: ${r.remarks}` : 'ग्राम पंचायत अधिकृत कर मद'}</div>
-                </td>
-                <td class="p-3 border border-slate-300 text-center font-bold text-slate-800 font-mono">
-                  वि.व. ${rFY}
-                </td>
-                <td class="p-3 border border-slate-300 text-right font-black font-mono text-emerald-900 text-base">₹${Number(r.taxAmount).toLocaleString('en-IN')}</td>
-              </tr>
-              <tr class="bg-emerald-50 font-black text-slate-900">
-                <td colspan="2" class="p-2.5 border border-slate-300 text-right">कुल प्राप्त राशि (Total Tax Paid):</td>
-                <td class="p-2.5 border border-slate-300 text-right font-mono text-lg text-emerald-950">₹${Number(r.taxAmount).toLocaleString('en-IN')}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-950 mb-6 space-y-1">
-            <div>
-              <strong>✓ प्रमाणित:</strong> हितग्राही से उपरोक्त कर मद हेतु वित्तीय वर्ष <strong>${rFY} (${fyInfo.fyCode})</strong> की कुल राशि <strong>₹${Number(r.taxAmount).toLocaleString('en-IN')}</strong> सधन्यवाद प्राप्त हुई।
-            </div>
-            ${isAnnualTax ? `
-              <div class="font-bold text-emerald-900 pt-1 border-t border-amber-200/60">
-                📌 वार्षिक कर नियम: यह कर वित्तीय वर्ष में केवल 1 बार देय है। अगला कर आगामी वित्तीय वर्ष ${fyInfo.nextFyShort} (01/04/${fyInfo.endYear} से) में देय होगा।
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Signatures -->
-          <div class="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-center text-xs">
-            <div>
-              <div class="h-10"></div>
-              <div class="font-bold text-slate-800">${r.collectorName || 'कर संग्राहक / लिपिक'}</div>
-              <div class="text-[10px] text-slate-500">ग्राम पंचायत (हस्ताक्षर)</div>
-            </div>
-            <div>
-              <div class="h-10"></div>
-              <div class="font-bold text-slate-800">${secretaryName}</div>
-              <div class="text-[10px] text-slate-500">सचिव / प्राधिकृत अधिकारी (हस्ताक्षर एवं सील)</div>
-            </div>
+          <div class="grid grid-cols-3 gap-2 pt-1 text-slate-700">
+            <div>समग्र आईडी: <strong class="font-mono text-slate-900">${r.samagraId || '-'}</strong></div>
+            <div>वार्ड क्रमांक: <strong class="text-slate-900">वार्ड ${r.wardNo || '01'}</strong></div>
+            <div>मोहल्ला: <strong class="text-emerald-900">${r.muhalla || '-'}</strong></div>
+            <div>मोबाइल: <strong class="font-mono text-slate-900">${r.mobile || '-'}</strong></div>
+            <div>भुगतान माध्यम: <strong class="text-slate-900">${r.paymentMode}</strong></div>
+            <div>ट्रांजेक्शन / चेक क्र: <strong class="font-mono text-slate-900">${r.transactionId || '-'}</strong></div>
           </div>
         </div>
-      </body>
-      </html>
+
+        <!-- Tax Receipt Statement Table -->
+        <table class="w-full text-xs border-collapse border border-slate-300 mb-4">
+          <thead>
+            <tr class="bg-emerald-800 text-white font-bold">
+              <th class="p-2.5 text-left border border-slate-300">विवरण / कर मद (Tax Head Description)</th>
+              <th class="p-2.5 text-center border border-slate-300 w-32">कर अवधि / वि.व.</th>
+              <th class="p-2.5 text-right border border-slate-300 w-40">प्राप्त राशि (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="p-3 border border-slate-300">
+                <div class="font-black text-slate-900 text-sm">${r.taxHead}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">${r.remarks ? `टिप्पणी: ${r.remarks}` : 'ग्राम पंचायत अधिकृत कर मद'}</div>
+              </td>
+              <td class="p-3 border border-slate-300 text-center font-bold text-slate-800 font-mono">
+                वि.व. ${rFY}
+              </td>
+              <td class="p-3 border border-slate-300 text-right font-black font-mono text-emerald-900 text-base">₹${Number(r.taxAmount).toLocaleString('en-IN')}</td>
+            </tr>
+            <tr class="bg-emerald-50 font-black text-slate-900">
+              <td colspan="2" class="p-2.5 border border-slate-300 text-right">कुल प्राप्त राशि (Total Tax Paid):</td>
+              <td class="p-2.5 border border-slate-300 text-right font-mono text-lg text-emerald-950">₹${Number(r.taxAmount).toLocaleString('en-IN')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-950 mb-6 space-y-1">
+          <div>
+            <strong>✓ प्रमाणित:</strong> हितग्राही से उपरोक्त कर मद हेतु वित्तीय वर्ष <strong>${rFY} (${fyInfo.fyCode})</strong> की कुल राशि <strong>₹${Number(r.taxAmount).toLocaleString('en-IN')}</strong> सधन्यवाद प्राप्त हुई।
+          </div>
+          ${isAnnualTax ? `
+            <div class="font-bold text-emerald-900 pt-1 border-t border-amber-200/60">
+              📌 वार्षिक कर नियम: यह कर वित्तीय वर्ष में केवल 1 बार देय है। अगला कर आगामी वित्तीय वर्ष ${fyInfo.nextFyShort} (01/04/${fyInfo.endYear} से) में देय होगा।
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Signatures -->
+        <div class="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-center text-xs">
+          <div>
+            <div class="h-10"></div>
+            <div class="font-bold text-slate-800">${r.collectorName || 'कर संग्राहक / लिपिक'}</div>
+            <div class="text-[10px] text-slate-500">ग्राम पंचायत (हस्ताक्षर)</div>
+          </div>
+          <div>
+            <div class="h-10"></div>
+            <div class="font-bold text-slate-800">${secretaryName}</div>
+            <div class="text-[10px] text-slate-500">सचिव / प्राधिकृत अधिकारी (हस्ताक्षर एवं सील)</div>
+          </div>
+        </div>
+      </div>
     `;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    openPrintWindow(bodyHtml, `कर रसीद - ${r.receiptNo}`, 'portrait');
   };
 
   return (

@@ -6,6 +6,7 @@
       "name": "gram-panchayat-tax-collection",
       "dependencies": {
         "@supabase/supabase-js": "^2.112.1",
+        "html2canvas": "^1.4.1",
         "jspdf": "^4.2.1",
         "jspdf-autotable": "^5.0.8",
         "lucide-react": "^1.26.0",

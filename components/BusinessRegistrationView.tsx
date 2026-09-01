@@ -7,6 +7,8 @@ import {
   getFinancialYear,
   triggerPrint,
   openPrintWindow,
+  openInStandaloneTab,
+  downloadElementAsPDF,
   getCleanOfficeTitle,
   getCleanOfficeSubtitle,
   getOfficeLogoUrl,
@@ -1184,28 +1186,39 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
 
               <button
                 type="button"
+                onClick={async () => {
+                  await downloadElementAsPDF('printable-business-certificate', `BusinessCertificate_${selectedRegForCertificate.certificateNo}`, 'landscape');
+                }}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <span>📥</span>
+                <span>PDF डाउनलोड करें</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  openInStandaloneTab('printable-business-certificate', `Certificate_${selectedRegForCertificate.certificateNo}`, 'landscape');
+                }}
+                className="px-3.5 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+              >
+                <span>↗️</span>
+                <span>नये टैब में</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   triggerPrint('printable-business-certificate', {
                     orientation: 'landscape',
                     title: `Certificate_${selectedRegForCertificate.certificateNo}`,
                   });
                 }}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer border border-emerald-600 active:scale-95"
+                className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-black rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
               >
                 <span>🖨️</span>
-                <span>प्रमाण पत्र प्रिंट करें (Landscape A4)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  openPrintWindow('printable-business-certificate', `Certificate_${selectedRegForCertificate.certificateNo}`, 'landscape');
-                }}
-                className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold rounded-xl border border-indigo-200 transition flex items-center gap-1.5 cursor-pointer"
-                title="नये फुल-स्क्रीन विंडो में खोलकर सीधे प्रिंट / PDF सेव करें"
-              >
-                <span>↗️</span>
-                <span>नये विंडो में प्रिंट / PDF</span>
+                <span>प्रिंट करें (Ctrl+P)</span>
               </button>
 
               {onDeleteRegistration && (
@@ -1234,7 +1247,7 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
           <div
             id="printable-business-certificate"
             data-orientation="landscape"
-            className="printable-certificate printable-landscape certificate-landscape bg-[#fffdfa] p-3.5 sm:p-5 md:p-6 rounded-2xl shadow-2xl border-[4px] border-emerald-950 max-w-[1100px] w-full mx-auto text-slate-900 relative font-sans leading-normal box-border print:p-2 print:border-[3px] print:rounded-none print:shadow-none print:max-w-full print:w-full print:overflow-visible print:m-0"
+            className="printable-certificate printable-landscape certificate-landscape bg-[#fffdfa] p-3.5 sm:p-5 md:p-6 rounded-2xl shadow-2xl border-[4px] border-emerald-950 max-w-[1100px] w-full mx-auto text-slate-900 relative font-devanagari leading-normal box-border print:p-2 print:border-[3px] print:rounded-none print:shadow-none print:max-w-full print:w-full print:overflow-visible print:m-0"
             style={{ boxSizing: 'border-box' }}
           >
             {/* INNER GOLDEN FILIGREE ACCENT BORDER WITH ORNAMENTAL CORNERS */}
@@ -1267,11 +1280,11 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                 <span className="text-[9px] text-amber-700 font-serif leading-none">⚜</span>
               </div>
 
-              {/* 1. OFFICIAL LANDSCAPE HEADER (PERFECT CENTER ALIGNMENT & PROMINENT LOGO) */}
-              <div className="relative z-10 flex items-center justify-center border-b-2 border-emerald-900/80 pb-2.5 print:pb-1.5 min-h-[90px] sm:min-h-[110px] print:min-h-[85px]">
-                {/* Left: State Emblem / Logo (Substantially Increased Size) */}
-                <div className="absolute left-1 sm:left-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
-                  <div className="w-20 h-20 sm:w-28 sm:h-28 print:w-22 print:h-22 p-1.5 bg-white rounded-2xl border-2 border-amber-400 shadow-md flex items-center justify-center">
+              {/* 1. OFFICIAL LANDSCAPE HEADER (CLEAN BALANCED EMBLEM & AUTHORITY DETAILS) */}
+              <div className="relative z-10 flex items-center justify-between border-b-2 border-emerald-900/80 pb-2.5 print:pb-1.5 min-h-[90px] sm:min-h-[105px] print:min-h-[85px] gap-3">
+                {/* Left: State Emblem / Logo */}
+                <div className="flex flex-col items-center justify-center shrink-0">
+                  <div className="w-18 h-18 sm:w-24 sm:h-24 print:w-20 print:h-20 p-1.5 bg-white rounded-2xl border-2 border-amber-400 shadow-md flex items-center justify-center">
                     <img
                       src={logoUrl}
                       alt="Official Emblem"
@@ -1283,13 +1296,13 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                       }}
                     />
                   </div>
-                  <span className="text-[8.5px] sm:text-[10px] print:text-[8.5px] font-black text-amber-950 mt-0.5 uppercase tracking-widest block font-serif">
+                  <span className="text-[8.5px] sm:text-[9.5px] print:text-[8px] font-black text-amber-950 mt-0.5 uppercase tracking-widest block font-serif">
                     सत्यमेव जयते
                   </span>
                 </div>
 
-                {/* Center: Grand Authority Details & Certificate Ribbon (100% Center Aligned) */}
-                <div className="w-full text-center space-y-1 px-20 sm:px-32 print:px-24">
+                {/* Center: Official Panchayat Details & Certificate Title Ribbon */}
+                <div className="flex-1 text-center space-y-1 pr-2 sm:pr-6">
                   <h1 className="text-xl sm:text-2xl lg:text-3xl print:text-2xl font-black text-emerald-950 tracking-wide uppercase leading-tight font-devanagari">
                     {officeTitle}
                   </h1>
@@ -1302,40 +1315,25 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                     <div className="inline-block bg-gradient-to-r from-emerald-950 via-emerald-800 to-emerald-950 text-white font-black text-xs sm:text-sm print:text-xs px-5 sm:px-7 py-1 rounded-full uppercase tracking-wider shadow-md border-2 border-amber-400">
                       🏛️ व्यावसायिक दुकान एवं संस्थान पंजीयन प्रमाण पत्र
                     </div>
-                    <p className="text-[9px] sm:text-[10px] print:text-[8.5px] font-black text-emerald-950 mt-0.5 uppercase tracking-widest">
-                      COMMERCIAL SHOP & BUSINESS ESTABLISHMENT REGISTRATION CERTIFICATE
-                    </p>
-                    <p className="text-[8.5px] sm:text-[9px] print:text-[8px] text-slate-600 font-medium italic">
-                      (मध्य प्रदेश पंचायत राज एवं ग्राम स्वराज अधिनियम 1993 के प्रावधानों एवं ग्राम पंचायत कराधान व अनुज्ञप्ति नियमों के अंतर्गत जारी)
+                    <p className="text-[9px] sm:text-[9.5px] print:text-[8px] text-emerald-950 font-bold mt-0.5">
+                      (मध्य प्रदेश पंचायत राज एवं ग्राम स्वराज अधिनियम 1993 के प्रावधानों अंतर्गत विधिमान्य)
                     </p>
                   </div>
-                </div>
-
-                {/* Right: Government Official Verification Seal */}
-                <div className="absolute right-1 sm:right-3 top-1/2 -translate-y-1/2 hidden md:flex print:flex flex-col items-center justify-center">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 print:w-20 print:h-20 p-1 bg-amber-50/90 rounded-2xl border-2 border-dashed border-amber-500/80 shadow-xs flex flex-col items-center justify-center text-center">
-                    <span className="text-xl sm:text-2xl print:text-lg">🏛️</span>
-                    <span className="text-[8.5px] sm:text-[9.5px] font-black text-emerald-950 uppercase leading-none mt-0.5">अधिकृत अभिलेख</span>
-                    <span className="text-[7.5px] sm:text-[8.5px] text-amber-900 font-mono font-bold mt-0.5">मध्य प्रदेश शासन</span>
-                  </div>
-                  <span className="text-[8px] sm:text-[9px] print:text-[8px] font-bold text-slate-600 mt-0.5 font-mono">
-                    GP CERTIFIED
-                  </span>
                 </div>
               </div>
 
               {/* 2. REGISTRATION NUMBER & METADATA BAR (4-PILL STRIP) */}
-              <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 print:gap-1.5 bg-amber-100/60 p-1.5 print:p-1 rounded-xl border border-amber-300 text-xs print:text-[10.5px]">
+              <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-2 print:gap-1.5 bg-amber-100/60 p-1.5 print:p-1 rounded-xl border border-amber-300 text-xs print:text-[10.5px]">
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 print:py-0.5 bg-white/95 rounded-lg border border-amber-200 shadow-xs">
                   <span className="font-bold text-slate-700 shrink-0">प्रमाण पत्र क्र.:</span>
                   <span className="font-mono font-black text-emerald-950 text-xs">{selectedRegForCertificate.certificateNo}</span>
                 </div>
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 print:py-0.5 bg-white/95 rounded-lg border border-amber-200 shadow-xs">
-                  <span className="font-bold text-slate-700 shrink-0">जारी दिनांक:</span>
+                  <span className="font-bold text-slate-700 shrink-0">पंजीयन दिनांक:</span>
                   <span className="font-mono font-bold text-slate-900 text-xs">{formatDateDDMMYYYY(selectedRegForCertificate.registrationDate)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 print:py-0.5 bg-white/95 rounded-lg border border-amber-200 shadow-xs">
-                  <span className="font-bold text-slate-700 shrink-0">सत्र:</span>
+                  <span className="font-bold text-slate-700 shrink-0">वित्तीय सत्र:</span>
                   <span className="font-mono font-bold text-indigo-950 text-xs">
                     {selectedRegForCertificate.registrationDate ? getFinancialYear(selectedRegForCertificate.registrationDate).label : '2026-2027'}
                   </span>
@@ -1349,21 +1347,21 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
               {/* 3. STATUTORY PREAMBLE DECLARATION */}
               <div className="relative z-10 text-[11px] sm:text-xs print:text-[10px] text-slate-800 leading-snug px-1 text-justify font-medium">
                 <p>
-                  प्रमाणित किया जाता है कि <strong>मध्य प्रदेश पंचायत राज एवं ग्राम स्वराज अधिनियम 1993</strong> तथा ग्राम पंचायत व्यवसाय एवं कराधान नियमावली के अंतर्गत निम्न विवरण अनुसार व्यावसायिक दुकान / प्रतिष्ठान का अधिकृत पंजीयन ग्राम पंचायत अभिलेख में सफलतापूर्वक कर यह विधिमान्य प्रमाण पत्र जारी किया जाता है:
+                  प्रमाणित किया जाता है कि <strong>मध्य प्रदेश पंचायत राज एवं ग्राम स्वराज अधिनियम 1993</strong> तथा ग्राम पंचायत व्यवसाय एवं कराधान नियमावली के अंतर्गत निम्न विवरण अनुसार व्यावसायिक दुकान / प्रतिष्ठान का अधिकृत पंजीयन ग्राम पंचायत अभिलेख में कर यह प्रमाण पत्र जारी किया जाता है:
                 </p>
               </div>
 
               {/* 4. MAIN 2-COLUMN LANDSCAPE CONTENT GRID */}
-              <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-3 print:gap-2 items-stretch text-xs print:text-[11px]">
+              <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 gap-3 print:gap-2 items-stretch text-xs print:text-[11px]">
                 
-                {/* LEFT COLUMN: प्रतिष्ठान एवं व्यवसाय विवरण (Shop & Business Particulars - 7 Cols) */}
-                <div className="md:col-span-7 bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden flex flex-col justify-between">
+                {/* LEFT COLUMN: भाग - १: व्यावसायिक प्रतिष्ठान / दुकान विवरण */}
+                <div className="md:col-span-7 print:col-span-7 bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden flex flex-col justify-between">
                   <div className="bg-emerald-900 text-white px-3 py-1 print:py-0.5 font-bold text-xs flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span>🏪</span>
-                      <span>1. व्यावसायिक प्रतिष्ठान / दुकान विवरण (Establishment Details)</span>
+                      <span>भाग - १: व्यावसायिक प्रतिष्ठान / दुकान विवरण</span>
                     </span>
-                    <span className="text-[9.5px] text-emerald-200 font-mono font-bold">भाग - अ</span>
+                    <span className="text-[9.5px] text-emerald-200 font-bold">प्रतिष्ठान अभिलेख</span>
                   </div>
 
                   <table className="min-w-full divide-y divide-slate-200 text-xs print:text-[11px]">
@@ -1384,27 +1382,33 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                         </td>
                       </tr>
                       <tr>
-                        <td className="px-2.5 py-1 print:py-0.5 font-bold text-slate-700">दुकान कुल क्षेत्रफल (Area):</td>
+                        <td className="px-2.5 py-1 print:py-0.5 font-bold text-slate-700">दुकान कुल क्षेत्रफल:</td>
                         <td className="px-2.5 py-1 print:py-0.5 font-mono font-black text-slate-950">
-                          {selectedRegForCertificate.shopAreaSqFt} वर्ग फीट (Sq. Ft.)
+                          {selectedRegForCertificate.shopAreaSqFt} वर्ग फीट
                         </td>
                       </tr>
                       <tr className="bg-slate-50/50">
-                        <td className="px-2.5 py-1 print:py-0.5 font-bold text-slate-700">GST / उद्योग पंजीयन (यदि हो):</td>
-                        <td className="px-2.5 py-1 print:py-0.5 font-mono font-bold text-slate-800">{selectedRegForCertificate.gstNumber || 'लागू नहीं / NA'}</td>
+                        <td className="px-2.5 py-1 print:py-0.5 font-bold text-slate-700">दुकान की अनुमानित लागत:</td>
+                        <td className="px-2.5 py-1 print:py-0.5 font-mono font-bold text-slate-900">
+                          {selectedRegForCertificate.shopTotalCost ? `₹${selectedRegForCertificate.shopTotalCost.toLocaleString('en-IN')}` : '-'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-2.5 py-1 print:py-0.5 font-bold text-slate-700">GST / अनुज्ञप्ति क्रमांक:</td>
+                        <td className="px-2.5 py-1 print:py-0.5 font-mono font-bold text-slate-800">{selectedRegForCertificate.gstNumber || 'लागू नहीं'}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                {/* RIGHT COLUMN: स्वामी / संचालक विवरण एवं अधिकृत छायाचित्र (Owner Particulars & Verified Photo - 5 Cols) */}
-                <div className="md:col-span-5 bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden flex flex-col justify-between">
+                {/* RIGHT COLUMN: भाग - २: स्वामी / संचालक विवरण एवं अधिकृत छायाचित्र */}
+                <div className="md:col-span-5 print:col-span-5 bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden flex flex-col justify-between">
                   <div className="bg-emerald-900 text-white px-3 py-1 print:py-0.5 font-bold text-xs flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span>👤</span>
-                      <span>2. संचालक विवरण व फोटो (Owner Details)</span>
+                      <span>भाग - २: स्वामी / संचालक विवरण एवं छायाचित्र</span>
                     </span>
-                    <span className="text-[9.5px] text-emerald-200 font-mono font-bold">भाग - ब</span>
+                    <span className="text-[9.5px] text-emerald-200 font-bold">संचालक अभिलेख</span>
                   </div>
 
                   <div className="p-2.5 print:p-1.5 flex gap-2.5 items-start">
@@ -1425,12 +1429,12 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                         </span>
                       </div>
                       <div className="border-b border-slate-100 pb-0.5">
-                        <span className="text-[9.5px] text-slate-500 block font-medium">पंजीकृत मोबाइल:</span>
+                        <span className="text-[9.5px] text-slate-500 block font-medium">पंजीकृत मोबाइल नंबर:</span>
                         <span className="text-[11px] font-mono font-bold text-slate-900 block">{selectedRegForCertificate.mobile || '-'}</span>
                       </div>
                       <div>
                         <span className="text-[9.5px] text-slate-500 block font-medium">सामाजिक वर्ग:</span>
-                        <span className="text-[11px] font-bold text-slate-700 block">{selectedRegForCertificate.category || 'General'}</span>
+                        <span className="text-[11px] font-bold text-slate-700 block">{selectedRegForCertificate.category || 'सामान्य (General)'}</span>
                       </div>
                     </div>
 
@@ -1448,7 +1452,7 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                           <span className="text-[8.5px] font-bold block mt-0.5">अधिकृत फोटो</span>
                         </div>
                       )}
-                      <div className="absolute bottom-0 inset-x-0 bg-emerald-900 text-white text-[7.5px] font-black text-center py-0.5 uppercase tracking-wider">
+                      <div className="absolute bottom-0 inset-x-0 bg-emerald-900 text-white text-[7.5px] font-black text-center py-0.5 uppercase tracking-wider font-devanagari">
                         अधिकृत छायाचित्र
                       </div>
                     </div>
@@ -1462,24 +1466,23 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
 
               </div>
 
-              {/* 5. STATUTORY TERMS & CONDITIONS (नियम एवं शर्तें) */}
+              {/* 5. STATUTORY TERMS & CONDITIONS (नियम एवं वैधानिक शर्तें) */}
               <div className="relative z-10 bg-slate-50/90 p-2 print:p-1.5 rounded-xl border border-slate-200 text-[9px] sm:text-[9.5px] print:text-[8.5px] text-slate-700 space-y-0.5 leading-snug">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-0.5 mb-0.5">
-                  <strong className="text-slate-900 font-black text-[9.5px] sm:text-[10.5px]">नियम एवं वैधानिक शर्तें (Statutory Terms & Conditions):</strong>
-                  <span className="text-[9px] text-slate-500 font-mono">ग्राम पंचायत कराधान नियमावली</span>
+                  <strong className="text-slate-900 font-black text-[9.5px] sm:text-[10.5px]">नियम एवं वैधानिक शर्तें:</strong>
+                  <span className="text-[9px] text-slate-500 font-devanagari">ग्राम पंचायत कराधान नियमावली</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 print:gap-1.5">
-                  <p><strong>1.</strong> यह प्रमाण पत्र ग्राम पंचायत सीमा क्षेत्र में उक्त व्यवसाय संचालन हेतु अधिकृत है एवं नियत समयावधि तक विधिमान्य है।</p>
-                  <p><strong>2.</strong> प्रतिष्ठान स्वामी द्वारा ग्राम पंचायत के समस्त विहित करों एवं शुल्कों का समय पर भुगतान करना अनिवार्य होगा।</p>
-                  <p><strong>3.</strong> सार्वजनिक मार्ग, नाली अथवा शासकीय भूमि पर किसी भी प्रकार का अतिक्रमण या अनधिकृत विस्तार करना प्रतिबंधित है।</p>
+                  <p><strong>१.</strong> यह प्रमाण पत्र ग्राम पंचायत सीमा क्षेत्र में उक्त व्यवसाय संचालन हेतु अधिकृत है एवं नियत समयावधि तक विधिमान्य है।</p>
+                  <p><strong>२.</strong> प्रतिष्ठान स्वामी द्वारा ग्राम पंचायत के समस्त विहित करों एवं शुल्कों का समय पर भुगतान करना अनिवार्य होगा।</p>
+                  <p><strong>३.</strong> सार्वजनिक मार्ग, नाली अथवा शासकीय भूमि पर किसी भी प्रकार का अतिक्रमण या अनधिकृत विस्तार करना प्रतिबंधित है।</p>
                 </div>
               </div>
 
-              {/* 6. OFFICIAL SIGNATURES FOOTER (WITH GENEROUS SPACE FOR SIGNATURE & OFFICIAL SEAL) */}
+              {/* 6. OFFICIAL SIGNATURES FOOTER */}
               <div className="relative z-10 pt-2 border-t-2 border-emerald-900/70 grid grid-cols-2 items-end text-center text-xs text-slate-800 px-6 sm:px-14 print:px-8">
                 {/* Column 1: Secretary Signature & Seal Area */}
                 <div className="flex flex-col items-center">
-                  {/* Dedicated open space for physical signature & office stamp */}
                   <div className="h-12 sm:h-14 print:h-11 flex items-end justify-center w-full pb-1">
                     <span className="text-[10px] text-slate-400/80 italic font-medium tracking-wide">
                       (हस्ताक्षर एवं पदमुद्रा)
@@ -1487,13 +1490,12 @@ export const BusinessRegistrationView: React.FC<BusinessRegistrationViewProps> =
                   </div>
                   <div className="border-b border-slate-700/80 w-44 sm:w-52 mb-1"></div>
                   <p className="font-black text-slate-950 text-xs sm:text-sm print:text-xs tracking-wide">{secretaryName}</p>
-                  <p className="font-bold text-slate-700 text-[10.5px] print:text-[9.5px]">सचिव / अधिकृत अधिकारी</p>
+                  <p className="font-bold text-slate-700 text-[10.5px] print:text-[9.5px]">सचिव / ग्राम रोजगार सहायक</p>
                   <p className="text-[9.5px] print:text-[8.5px] text-slate-500 font-medium">{officeTitle}</p>
                 </div>
 
                 {/* Column 2: Sarpanch Signature & Seal Area */}
                 <div className="flex flex-col items-center">
-                  {/* Dedicated open space for physical signature & office stamp */}
                   <div className="h-12 sm:h-14 print:h-11 flex items-end justify-center w-full pb-1">
                     <span className="text-[10px] text-slate-400/80 italic font-medium tracking-wide">
                       (हस्ताक्षर एवं पदमुद्रा)

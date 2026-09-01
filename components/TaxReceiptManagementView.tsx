@@ -2,7 +2,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Payment, Family, Admin, TaxType, OfficeDetails, Tax } from '../types';
 import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
-import { triggerPrint, getCleanOfficeTitle, formatDateDDMMYYYY } from '../utils/printUtils';
+import {
+  triggerPrint,
+  getCleanOfficeTitle,
+  formatDateDDMMYYYY,
+  downloadElementAsPDF,
+  openInStandaloneTab
+} from '../utils/printUtils';
 import { exportBulkVouchersToPDF, exportToExcel } from '../utils/exportUtils';
 import {
   DuplicateWarningModal,
@@ -1117,18 +1123,46 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
                   </button>
                 )}
               </div>
-              <button
-                onClick={() => {
-                  try {
-                    triggerPrint('receipt-print-area');
-                  } catch (e) {
-                    console.error('Print failed:', e);
-                  }
-                }}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-colors text-xs sm:text-sm flex items-center gap-2 cursor-pointer"
-              >
-                <span>🖨️</span> {isHindi ? 'रसीद पावती प्रिंट करें (Print / Download Receipt)' : 'Print / Download Receipt Voucher'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (viewingReceipt) {
+                      await downloadElementAsPDF('receipt-print-area', `Receipt_${viewingReceipt.receiptNo || viewingReceipt.id}`, 'portrait');
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow transition-colors text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>📥</span> {isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (viewingReceipt) {
+                      openInStandaloneTab('receipt-print-area', `Receipt_${viewingReceipt.receiptNo || viewingReceipt.id}`, 'portrait');
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-sky-700 hover:bg-sky-800 text-white font-bold rounded-xl shadow transition-colors text-xs flex items-center gap-1.5 cursor-pointer"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span> {isHindi ? 'नये टैब में' : 'New Tab'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      triggerPrint('receipt-print-area', {
+                        title: viewingReceipt ? `Receipt_${viewingReceipt.receiptNo}` : 'Tax_Receipt'
+                      });
+                    } catch (e) {
+                      console.error('Print failed:', e);
+                    }
+                  }}
+                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white font-bold rounded-xl shadow transition-colors text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>🖨️</span> {isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1263,12 +1297,40 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
                 >
                   ✕ {isHindi ? 'बंद करें' : 'Close'}
                 </button>
-                <button
-                  onClick={() => triggerPrint('member-card-printable')}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-black text-amber-300 font-black rounded-xl text-xs flex items-center gap-2 shadow-md cursor-pointer"
-                >
-                  <span>🖨️</span> {isHindi ? 'सदस्य कार्ड प्रिंट करें' : 'Print Member Card'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (memberCardFamily) {
+                        await downloadElementAsPDF('member-card-printable', `MemberCard_${memberCardFamily.name}_${memberCardFamily.samagraId}`, 'portrait');
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition cursor-pointer"
+                  >
+                    <span>📥</span> {isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (memberCardFamily) {
+                        openInStandaloneTab('member-card-printable', `MemberCard_${memberCardFamily.name}_${memberCardFamily.samagraId}`, 'portrait');
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-sky-700 hover:bg-sky-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition cursor-pointer"
+                    title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                  >
+                    <span>↗️</span> {isHindi ? 'नये टैब में' : 'New Tab'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPrint('member-card-printable', {
+                      title: memberCardFamily ? `MemberCard_${memberCardFamily.name}` : 'Member_Card'
+                    })}
+                    className="px-4 py-2 bg-slate-900 hover:bg-black text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow transition cursor-pointer"
+                  >
+                    <span>🖨️</span> {isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1465,12 +1527,36 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
                     <span>{isHindi ? 'PDF फाइल डाउनलोड करें' : 'Download PDF File'}</span>
                   </button>
 
+                  {/* OPEN IN NEW TAB */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        openInStandaloneTab('bulk-vouchers-print-area', `BulkVouchers_${bulkSelectedMonth}_${bulkSelectedYear}`, 'portrait');
+                      } catch (e) {
+                        console.error('Bulk voucher standalone tab error:', e);
+                      }
+                    }}
+                    disabled={filteredBulkVouchers.length === 0}
+                    className={`px-3.5 py-2 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                      filteredBulkVouchers.length === 0
+                        ? 'bg-slate-300 cursor-not-allowed text-slate-500'
+                        : 'bg-sky-700 hover:bg-sky-800 active:scale-95'
+                    }`}
+                    title={isHindi ? 'नये विंडो/टैब में खोलकर प्रिंट या PDF सेव करें' : 'Open in new tab to print or save PDF'}
+                  >
+                    <span>↗️</span>
+                    <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+                  </button>
+
                   {/* BULK PRINT / BROWSER PRINT TO PDF */}
                   <button
                     type="button"
                     onClick={() => {
                       try {
-                        triggerPrint('bulk-vouchers-print-area');
+                        triggerPrint('bulk-vouchers-print-area', {
+                          title: `BulkVouchers_${bulkSelectedMonth}_${bulkSelectedYear}`
+                        });
                       } catch (e) {
                         console.error('Bulk voucher print error:', e);
                       }
@@ -1479,12 +1565,12 @@ export const TaxReceiptManagementView: React.FC<TaxReceiptManagementViewProps> =
                     className={`px-3.5 py-2 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
                       filteredBulkVouchers.length === 0
                         ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                        : 'bg-slate-900 hover:bg-black active:scale-95 text-amber-300'
+                        : 'bg-slate-900 hover:bg-black active:scale-95 text-white'
                     }`}
                     title={isHindi ? 'वाउचर बुक प्रिंट करें अथवा PDF के रूप में सेव करें' : 'Print Voucher Book or Save to PDF'}
                   >
                     <span>🖨️</span>
-                    <span>{isHindi ? 'थोक प्रिंट / वाउचर बुक' : 'Bulk Print Book'}</span>
+                    <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Bulk Print Book'}</span>
                   </button>
 
                   {/* EXCEL EXPORT */}

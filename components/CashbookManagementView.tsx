@@ -22,7 +22,7 @@ import {
   SuccessPopupModal,
   SuccessPopupDetails,
 } from './EntryFeedbackModals';
-import { triggerPrint, getCleanOfficeTitle, isInFinancialYear, formatDateDDMMYYYY } from '../utils/printUtils';
+import { triggerPrint, openInStandaloneTab, downloadElementAsPDF, getCleanOfficeTitle, isInFinancialYear, formatDateDDMMYYYY } from '../utils/printUtils';
 
 interface CashbookManagementViewProps {
   accountHeads: AccountHead[];
@@ -84,6 +84,8 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
   onDeleteWork,
   onAddVoucher,
   onDeleteVoucher,
+  onBack,
+  onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<CashbookTab>(initialTab);
 
@@ -1042,225 +1044,236 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
     <div className="space-y-6">
       {/* HEADER */}
       <ViewHeader
-        title={isHindi ? 'ग्राम पंचायत कैशबुक एवं बहीखाता प्रबंधन' : 'Panchayat Cashbook & Financial Ledger'}
-        subtitle={
-          isHindi
-            ? 'खाता शीर्षक, वेंडर, निर्माण कार्य, आय/व्यय वाउचर एवं रोकड़ बही रिपोर्ट'
-            : 'Account Heads, Vendors, Works, Income/Expenditure Vouchers & Cashbook Register'
+        title={
+          activeTab === CashbookTab.EXPENDITURE_VOUCHERS
+            ? (isHindi ? 'व्यय वाउचर प्रविष्टि एवं रिकॉर्ड (Expenditure Voucher)' : 'Expenditure Voucher Entry & Records')
+            : (isHindi ? 'ग्राम पंचायत कैशबुक एवं बहीखाता प्रबंधन' : 'Panchayat Cashbook & Financial Ledger')
         }
-        icon="📗"
-        badge={officeDetails?.officeName || 'Gram Panchayat Office'}
+        subtitle={
+          activeTab === CashbookTab.EXPENDITURE_VOUCHERS
+            ? (isHindi ? 'नया व्यय वाउचर दर्ज करें, वाउचर स्लिप एवं भुगतान नोटशीट जनरेट करें' : 'Record new expenditure voucher, generate voucher slips & payment note sheets')
+            : (isHindi ? 'खाता शीर्षक, वेंडर, निर्माण कार्य, आय/व्यय वाउचर एवं रोकड़ बही रिपोर्ट' : 'Account Heads, Vendors, Works, Income/Expenditure Vouchers & Cashbook Register')
+        }
+        onBack={onBack}
+        onClose={onClose}
+        isHindi={isHindi}
       />
 
-      {/* TOP METRICS SUMMARY CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 print:hidden">
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-500 uppercase">{isHindi ? 'प्रारंभिक शेष' : 'Opening Bal'}</p>
-            <p className="text-lg font-black text-slate-800 font-mono mt-0.5">
-              ₹{grandSummary.totalOpening.toLocaleString('en-IN')}
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-base font-bold">
-            🏛️
-          </div>
-        </div>
-
-        <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-emerald-800 uppercase">{isHindi ? 'कुल आय (+)' : 'Total Income'}</p>
-            <p className="text-lg font-black text-emerald-700 font-mono mt-0.5">
-              +₹{grandSummary.totalIncome.toLocaleString('en-IN')}
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-200 text-emerald-900 flex items-center justify-center text-base font-bold">
-            📈
-          </div>
-        </div>
-
-        <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-rose-800 uppercase">{isHindi ? 'कुल व्यय (-)' : 'Total Expense'}</p>
-            <p className="text-lg font-black text-rose-700 font-mono mt-0.5">
-              -₹{grandSummary.totalExpenditure.toLocaleString('en-IN')}
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-200 text-rose-900 flex items-center justify-center text-base font-bold">
-            📉
-          </div>
-        </div>
-
-        <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-blue-900 uppercase">{isHindi ? 'बैंक खाता स्तर शेष' : 'Bank Bal'}</p>
-            <p className="text-lg font-black text-blue-800 font-mono mt-0.5">
-              ₹{grandSummary.bankBalance.toLocaleString('en-IN')}
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-blue-200 text-blue-900 flex items-center justify-center text-base font-bold">
-            🏦
-          </div>
-        </div>
-
-        <div className="p-3.5 bg-primary/10 rounded-2xl border border-primary/20 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-primary uppercase">{isHindi ? 'अंतिम कुल शेष' : 'Closing Net Bal'}</p>
-            <p className="text-lg font-black text-primary font-mono mt-0.5">
-              ₹{grandSummary.closingBalance.toLocaleString('en-IN')}
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center text-base font-bold">
-            💰
-          </div>
-        </div>
-      </div>
-
-      {/* TAXATION RECEIPTS & CASHBOOK SYNC STATUS BAR */}
-      <div className="p-3.5 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl shadow-md border border-emerald-700/50 flex flex-col md:flex-row items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg shrink-0">
-            ⚡
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 rounded-md text-[10px] font-black uppercase tracking-wider">
-                {isHindi ? 'स्वतः सिंक सक्रिय' : 'Auto Sync Active'}
-              </span>
-              <p className="text-xs font-black text-white">
-                {isHindi
-                  ? 'कर संग्रह, अन्य कर, भवन अनुमति एवं बुकिंग रसीदें कैशबुक से 100% सिंक हैं'
-                  : 'Tax collections, building permissions & booking rents are synced with Cashbook'}
+      {/* TOP METRICS SUMMARY CARDS (Hidden on Expenditure Voucher page) */}
+      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 print:hidden">
+          <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 uppercase">{isHindi ? 'प्रारंभिक शेष' : 'Opening Bal'}</p>
+              <p className="text-lg font-black text-slate-800 font-mono mt-0.5">
+                ₹{grandSummary.totalOpening.toLocaleString('en-IN')}
               </p>
             </div>
-            <p className="text-[11px] text-emerald-200/80 mt-0.5">
-              {isHindi
-                ? `कुल कर रसीदें: ${payments.length} | अन्य कर: ${otherTaxReceipts.length} | भवन अनुमति: ${buildingPermissions.length} | बुकिंग किराया: ${bookingRents.length}`
-                : `Tax Receipts: ${payments.length} | Other Tax: ${otherTaxReceipts.length} | Building Perms: ${buildingPermissions.length} | Booking Rents: ${bookingRents.length}`}
-            </p>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-base font-bold">
+              🏛️
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-emerald-800 uppercase">{isHindi ? 'कुल आय (+)' : 'Total Income'}</p>
+              <p className="text-lg font-black text-emerald-700 font-mono mt-0.5">
+                +₹{grandSummary.totalIncome.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-200 text-emerald-900 flex items-center justify-center text-base font-bold">
+              📈
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-rose-800 uppercase">{isHindi ? 'कुल व्यय (-)' : 'Total Expense'}</p>
+              <p className="text-lg font-black text-rose-700 font-mono mt-0.5">
+                -₹{grandSummary.totalExpenditure.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-rose-200 text-rose-900 flex items-center justify-center text-base font-bold">
+              📉
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-blue-900 uppercase">{isHindi ? 'बैंक खाता स्तर शेष' : 'Bank Bal'}</p>
+              <p className="text-lg font-black text-blue-800 font-mono mt-0.5">
+                ₹{grandSummary.bankBalance.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-blue-200 text-blue-900 flex items-center justify-center text-base font-bold">
+              🏦
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-primary/10 rounded-2xl border border-primary/20 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-primary uppercase">{isHindi ? 'अंतिम कुल शेष' : 'Closing Net Bal'}</p>
+              <p className="text-lg font-black text-primary font-mono mt-0.5">
+                ₹{grandSummary.closingBalance.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center text-base font-bold">
+              💰
+            </div>
           </div>
         </div>
+      )}
 
-        {onSyncTaxTransactions && (
+      {/* TAXATION RECEIPTS & CASHBOOK SYNC STATUS BAR (Hidden on Expenditure Voucher page) */}
+      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
+        <div className="p-3.5 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl shadow-md border border-emerald-700/50 flex flex-col md:flex-row items-center justify-between gap-3 print:hidden">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg shrink-0">
+              ⚡
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 rounded-md text-[10px] font-black uppercase tracking-wider">
+                  {isHindi ? 'स्वतः सिंक सक्रिय' : 'Auto Sync Active'}
+                </span>
+                <p className="text-xs font-black text-white">
+                  {isHindi
+                    ? 'कर संग्रह, अन्य कर, भवन अनुमति एवं बुकिंग रसीदें कैशबुक से 100% सिंक हैं'
+                    : 'Tax collections, building permissions & booking rents are synced with Cashbook'}
+                </p>
+              </div>
+              <p className="text-[11px] text-emerald-200/80 mt-0.5">
+                {isHindi
+                  ? `कुल कर रसीदें: ${payments.length} | अन्य कर: ${otherTaxReceipts.length} | भवन अनुमति: ${buildingPermissions.length} | बुकिंग किराया: ${bookingRents.length}`
+                  : `Tax Receipts: ${payments.length} | Other Tax: ${otherTaxReceipts.length} | Building Perms: ${buildingPermissions.length} | Booking Rents: ${bookingRents.length}`}
+              </p>
+            </div>
+          </div>
+
+          {onSyncTaxTransactions && (
+            <button
+              onClick={onSyncTaxTransactions}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <span>🔄</span>
+              <span>{isHindi ? 'कर रसीदें सिंक करें' : 'Sync Tax Receipts'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* MODULE TAB NAVIGATION BAR (Hidden on Expenditure Voucher page) */}
+      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
+        <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-1.5 print:hidden">
           <button
-            onClick={onSyncTaxTransactions}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+            onClick={() => setActiveTab(CashbookTab.ACCOUNT_HEADS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.ACCOUNT_HEADS
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
           >
-            <span>🔄</span>
-            <span>{isHindi ? 'कर रसीदें सिंक करें' : 'Sync Tax Receipts'}</span>
+            <span>🏦</span>
+            <span>1. {isHindi ? 'खाता शीर्षक निर्माण' : 'Account Heads'}</span>
           </button>
-        )}
-      </div>
 
-      {/* MODULE TAB NAVIGATION BAR */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-1.5 print:hidden">
-        <button
-          onClick={() => setActiveTab(CashbookTab.ACCOUNT_HEADS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.ACCOUNT_HEADS
-              ? 'bg-slate-900 text-white shadow-md'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          <span>🏦</span>
-          <span>1. {isHindi ? 'खाता शीर्षक निर्माण' : 'Account Heads'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.EXPENSE_SUBHEADS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.EXPENSE_SUBHEADS
+                ? 'bg-rose-700 text-white shadow-md'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-900'
+            }`}
+          >
+            <span>📁</span>
+            <span>2. {isHindi ? 'व्यय उप-शीर्षक' : 'Expense Subheads'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.EXPENSE_SUBHEADS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.EXPENSE_SUBHEADS
-              ? 'bg-rose-700 text-white shadow-md'
-              : 'bg-rose-50 hover:bg-rose-100 text-rose-900'
-          }`}
-        >
-          <span>📁</span>
-          <span>2. {isHindi ? 'व्यय उप-शीर्षक' : 'Expense Subheads'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.VENDORS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.VENDORS
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <span>🏬</span>
+            <span>3. {isHindi ? 'वेंडर प्रबंधन' : 'Vendor Management'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.VENDORS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.VENDORS
-              ? 'bg-slate-900 text-white shadow-md'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          <span>🏬</span>
-          <span>3. {isHindi ? 'वेंडर प्रबंधन' : 'Vendor Management'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.WORKS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.WORKS
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <span>🏗️</span>
+            <span>4. {isHindi ? 'कार्य प्रबंधन' : 'Work Management'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.WORKS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.WORKS
-              ? 'bg-slate-900 text-white shadow-md'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          <span>🏗️</span>
-          <span>4. {isHindi ? 'कार्य प्रबंधन' : 'Work Management'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.INCOME_VOUCHERS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.INCOME_VOUCHERS
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
+            }`}
+          >
+            <span>📈</span>
+            <span>5. {isHindi ? 'आय वाउचर' : 'Income Voucher'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.INCOME_VOUCHERS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.INCOME_VOUCHERS
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
-          }`}
-        >
-          <span>📈</span>
-          <span>5. {isHindi ? 'आय वाउचर' : 'Income Voucher'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.EXPENDITURE_VOUCHERS)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.EXPENDITURE_VOUCHERS
+                ? 'bg-rose-600 text-white shadow-md'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
+            }`}
+          >
+            <span>📉</span>
+            <span>6. {isHindi ? 'व्यय वाउचर' : 'Expenditure Voucher'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.EXPENDITURE_VOUCHERS)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.EXPENDITURE_VOUCHERS
-              ? 'bg-rose-600 text-white shadow-md'
-              : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
-          }`}
-        >
-          <span>📉</span>
-          <span>6. {isHindi ? 'व्यय वाउचर' : 'Expenditure Voucher'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.LEDGER_REPORT)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.LEDGER_REPORT
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800'
+            }`}
+          >
+            <span>📊</span>
+            <span>7. {isHindi ? 'लेजर रिपोर्ट' : 'Ledger Report'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.LEDGER_REPORT)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.LEDGER_REPORT
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800'
-          }`}
-        >
-          <span>📊</span>
-          <span>7. {isHindi ? 'लेजर रिपोर्ट' : 'Ledger Report'}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(CashbookTab.CASHBOOK_REPORT)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.CASHBOOK_REPORT
+                ? 'bg-amber-600 text-white shadow-md'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
+            }`}
+          >
+            <span>📗</span>
+            <span>7. {isHindi ? 'कैशबुक/रोकड़ बही रिपोर्ट' : 'Cashbook Report'}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab(CashbookTab.CASHBOOK_REPORT)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.CASHBOOK_REPORT
-              ? 'bg-amber-600 text-white shadow-md'
-              : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
-          }`}
-        >
-          <span>📗</span>
-          <span>7. {isHindi ? 'कैशबुक/रोकड़ बही रिपोर्ट' : 'Cashbook Report'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab(CashbookTab.WORK_EXPENDITURE_REPORT)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === CashbookTab.WORK_EXPENDITURE_REPORT
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'bg-teal-50 hover:bg-teal-100 text-teal-900'
-          }`}
-        >
-          <span>🚜</span>
-          <span>8. {isHindi ? 'कार्य व्यय व अभिसरण रिपोर्ट' : 'Work Expenditure Report'}</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab(CashbookTab.WORK_EXPENDITURE_REPORT)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === CashbookTab.WORK_EXPENDITURE_REPORT
+                ? 'bg-teal-600 text-white shadow-md'
+                : 'bg-teal-50 hover:bg-teal-100 text-teal-900'
+            }`}
+          >
+            <span>🚜</span>
+            <span>8. {isHindi ? 'कार्य व्यय व अभिसरण रिपोर्ट' : 'Work Expenditure Report'}</span>
+          </button>
+        </div>
+      )}
 
       {/* TAB 1: ACCOUNT HEAD CREATION */}
       {activeTab === CashbookTab.ACCOUNT_HEADS && (
@@ -2558,7 +2571,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
       {/* TAB 6: LEDGER REPORT */}
       {activeTab === CashbookTab.LEDGER_REPORT && (
-        <div id="printable-area" className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-5 printable-area">
+        <div id="printable-cashbook-ledger" className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-5 printable-area">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -2570,26 +2583,49 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 print:hidden">
+            <div className="flex flex-wrap items-center gap-2 print:hidden">
               <button
+                type="button"
                 onClick={handleExportCSV}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1"
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
               >
-                <span>📥</span>
+                <span>📊</span>
                 <span>{isHindi ? 'Excel/CSV डाउनलोड' : 'Export CSV'}</span>
               </button>
               <button
+                type="button"
+                onClick={async () => {
+                  await downloadElementAsPDF('printable-cashbook-ledger', `Ledger_Report_${filterFinancialYear}`, 'portrait');
+                }}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>📥</span>
+                <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  openInStandaloneTab('printable-cashbook-ledger', `Ledger_Report_${filterFinancialYear}`, 'portrait');
+                }}
+                className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+              >
+                <span>↗️</span>
+                <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   try {
-                    triggerPrint('printable-area');
+                    triggerPrint('printable-cashbook-ledger', { orientation: 'portrait', title: `Ledger_Report_${filterFinancialYear}` });
                   } catch (e) {
                     console.error('Print ledger failed:', e);
                   }
                 }}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1"
+                className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 <span>🖨️</span>
-                <span>{isHindi ? 'प्रिंट लेजर रिपोर्ट' : 'Print Ledger'}</span>
+                <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Ledger'}</span>
               </button>
             </div>
           </div>
@@ -2848,7 +2884,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
       {/* TAB 7: CASHBOOK REGISTER REPORT (EXCEL & PDF PRINTABLE) */}
       {activeTab === CashbookTab.CASHBOOK_REPORT && (
-        <div id="printable-area" className="p-6 bg-white rounded-2xl border border-slate-200 shadow-lg space-y-6 printable-area">
+        <div id="printable-cashbook-register" className="p-6 bg-white rounded-2xl border border-slate-200 shadow-lg space-y-6 printable-area">
           
           {/* PRINTABLE OFFICIAL PANCHAYAT HEADER */}
           <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
@@ -2893,27 +2929,52 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 print:hidden">
               <button
+                type="button"
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               >
-                <span>📥</span>
-                <span>{isHindi ? 'Excel (CSV) डाउनलोड' : 'Download Excel'}</span>
+                <span>📊</span>
+                <span>{isHindi ? 'Excel (CSV)' : 'Download Excel'}</span>
               </button>
 
               <button
+                type="button"
+                onClick={async () => {
+                  await downloadElementAsPDF('printable-cashbook-register', `Cashbook_${filterFinancialYear}`, 'landscape');
+                }}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>📥</span>
+                <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  openInStandaloneTab('printable-cashbook-register', `Cashbook_${filterFinancialYear}`, 'landscape');
+                }}
+                className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+              >
+                <span>↗️</span>
+                <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   try {
-                    triggerPrint('printable-area');
+                    triggerPrint('printable-cashbook-register', { orientation: 'landscape', title: `Cashbook_${filterFinancialYear}` });
                   } catch (e) {
                     console.error('Print cashbook failed:', e);
                   }
                 }}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span>🖨️</span>
-                <span>{isHindi ? 'कैशबुक प्रिंट / PDF' : 'Print / Save PDF'}</span>
+                <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Cashbook'}</span>
               </button>
             </div>
           </div>
@@ -3155,7 +3216,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
       {/* TAB 8: WORK EXPENDITURE REPORT (कार्य-वार व्यय एवं अभिसरण रिपोर्ट) */}
       {activeTab === CashbookTab.WORK_EXPENDITURE_REPORT && (
-        <div className="space-y-6 printable-area">
+        <div id="printable-works-expenditure-report" className="space-y-6 printable-area">
           {/* REPORT TITLE BANNER */}
           <div className="p-5 bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-2xl shadow-md border border-teal-800 space-y-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -3171,26 +3232,49 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 print:hidden">
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
                 <button
+                  type="button"
                   onClick={handleExportCSV}
                   className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>📥</span>
+                  <span>📊</span>
                   <span>{isHindi ? 'Excel (CSV)' : 'Excel CSV'}</span>
                 </button>
                 <button
+                  type="button"
+                  onClick={async () => {
+                    await downloadElementAsPDF('printable-works-expenditure-report', 'Work_Expenditure_Report', 'landscape');
+                  }}
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📥</span>
+                  <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInStandaloneTab('printable-works-expenditure-report', 'Work_Expenditure_Report', 'landscape');
+                  }}
+                  className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span>
+                  <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     try {
-                      triggerPrint('printable-area');
+                      triggerPrint('printable-works-expenditure-report', { orientation: 'landscape', title: 'Work_Expenditure_Report' });
                     } catch (e) {
                       console.error('Print Work Report failed:', e);
                     }
                   }}
-                  className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span>🖨️</span>
-                  <span>{isHindi ? 'रिपोर्ट प्रिंट / PDF' : 'Print Report'}</span>
+                  <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Report'}</span>
                 </button>
               </div>
             </div>
@@ -3415,8 +3499,8 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
       {/* PRINT VOUCHER SLIP MODAL */}
       {viewingVoucherSlip && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0">
-          <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-2xl w-full p-6 shadow-2xl space-y-6 printable-area print:border-2 print:border-black">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 overflow-y-auto">
+          <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-2xl w-full p-6 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-0 print:shadow-none print:p-0">
             {/* MODAL HEADER WITH ACTION BUTTONS */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 print:hidden">
               <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
@@ -3437,18 +3521,41 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                     <span>{isHindi ? 'भुगतान नोटशीट देखें/प्रिंट करें' : 'Print Note Sheet'}</span>
                   </button>
                 )}
+                {/* STANDARDIZED ACTION BUTTONS */}
                 <button
+                  type="button"
+                  onClick={async () => {
+                    await downloadElementAsPDF('printable-voucher-slip', `Voucher_${viewingVoucherSlip.voucherNo}`, 'portrait');
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span>📥</span>
+                  <span>{isHindi ? 'PDF डाउनलोड' : 'Download PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInStandaloneTab('printable-voucher-slip', `Voucher_${viewingVoucherSlip.voucherNo}`, 'portrait');
+                  }}
+                  className="px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span>
+                  <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     try {
-                      triggerPrint('printable-area');
+                      triggerPrint('printable-voucher-slip', { orientation: 'portrait', title: `Voucher_${viewingVoucherSlip.voucherNo}` });
                     } catch (e) {
                       console.error('Print voucher failed:', e);
                     }
                   }}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
                 >
                   <span>🖨️</span>
-                  <span>{isHindi ? 'वाउचर प्रिंट करें' : 'Print Voucher'}</span>
+                  <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Voucher'}</span>
                 </button>
                 <button
                   onClick={() => setViewingVoucherSlip(null)}
@@ -3460,7 +3567,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
             </div>
 
             {/* PRINTABLE VOUCHER DOCUMENT */}
-            <div className="space-y-4 font-serif text-slate-900 text-xs">
+            <div id="printable-voucher-slip" className="bg-white p-5 sm:p-7 border-2 border-slate-900 rounded-xl space-y-4 font-serif text-slate-900 text-xs printable-area">
               <OfficialVoucherHeader
                 officeDetails={officeDetails}
                 adminPanchayat={(officeDetails as any)?.gramPanchayat}
@@ -3585,8 +3692,8 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
           : (v.expenseCategory === 'OFFICE' ? 'कार्यालयीन व्यय (Office Expense)' : 'सामान्य / अन्य व्यय (General Expense)');
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0">
-            <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 printable-area print:border-0 print:shadow-none print:p-0 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 overflow-y-auto">
+            <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-0 print:shadow-none print:p-0">
               {/* MODAL HEADER WITH ACTION BUTTONS */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-3 print:hidden shrink-0">
                 <div className="flex items-center gap-2">
@@ -3605,19 +3712,42 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
+                    onClick={async () => {
+                      await downloadElementAsPDF('printable-payment-notesheet', `NoteSheet_${viewingNoteSheet.voucherNo}`, 'portrait');
+                    }}
+                    className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>📥</span>
+                    <span>{isHindi ? 'PDF डाउनलोड' : 'Download PDF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openInStandaloneTab('printable-payment-notesheet', `NoteSheet_${viewingNoteSheet.voucherNo}`, 'portrait');
+                    }}
+                    className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                    title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                  >
+                    <span>↗️</span>
+                    <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       try {
-                        triggerPrint('printable-area');
+                        triggerPrint('printable-payment-notesheet', { orientation: 'portrait', title: `NoteSheet_${viewingNoteSheet.voucherNo}` });
                       } catch (e) {
                         console.error('Print note sheet failed:', e);
                       }
                     }}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-black rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🖨️</span>
-                    <span>{isHindi ? 'नोटशीट प्रिंट करें' : 'Print Note Sheet'}</span>
+                    <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Note Sheet'}</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => setViewingNoteSheet(null)}
                     className="p-1.5 text-slate-400 hover:text-slate-700 text-lg cursor-pointer"
                   >
@@ -3627,7 +3757,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
               </div>
 
               {/* PRINTABLE PAYMENT NOTE SHEET DOCUMENT */}
-              <div className="space-y-5 text-slate-900 font-serif leading-relaxed text-sm print:text-xs">
+              <div id="printable-payment-notesheet" className="bg-white space-y-4 text-slate-900 font-serif leading-relaxed text-sm print:text-xs printable-area">
                 {/* Standardized Panchayat Letterhead Header with Logo */}
                 <OfficialVoucherHeader
                   officeDetails={officeDetails}
@@ -3976,8 +4106,8 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
       {/* VIEW WORK EXPENSE VOUCHERS MODAL */}
       {viewingWorkVouchersModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0">
-          <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-4xl w-full p-6 shadow-2xl space-y-5 printable-area max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 overflow-y-auto">
+          <div className="bg-white rounded-2xl border-2 border-slate-800 max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-0 print:shadow-none print:p-0">
             {/* MODAL HEADER */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 print:hidden">
               <div className="flex items-center gap-2">
@@ -3992,9 +4122,31 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
 
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
+                  onClick={async () => {
+                    await downloadElementAsPDF('printable-work-breakdown-modal', `Work_Vouchers_${viewingWorkVouchersModal.name}`, 'portrait');
+                  }}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span>📥</span>
+                  <span>{isHindi ? 'PDF' : 'PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInStandaloneTab('printable-work-breakdown-modal', `Work_Vouchers_${viewingWorkVouchersModal.name}`, 'portrait');
+                  }}
+                  className="px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span>
+                  <span>{isHindi ? 'नये टैब' : 'New Tab'}</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     try {
-                      triggerPrint('printable-area');
+                      triggerPrint('printable-work-breakdown-modal', { orientation: 'portrait', title: `Work_Vouchers_${viewingWorkVouchersModal.name}` });
                     } catch (e) {
                       console.error('Print Work Vouchers failed:', e);
                     }
@@ -4005,6 +4157,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                   <span>{isHindi ? 'प्रिंट विवरण' : 'Print Breakdown'}</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewingWorkVouchersModal(null)}
                   className="p-1.5 text-slate-400 hover:text-slate-700 text-lg cursor-pointer"
                 >
@@ -4013,11 +4166,13 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
               </div>
             </div>
 
-            {/* WORK SUMMARY CARD INSIDE MODAL */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-300 grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-              <div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase">{isHindi ? 'मूल मद आवंटन:' : 'Main Head:'}</p>
-                <p className="font-bold text-slate-900">
+            {/* PRINTABLE WORK BREAKDOWN */}
+            <div id="printable-work-breakdown-modal" className="bg-white space-y-5 printable-area">
+              {/* WORK SUMMARY CARD INSIDE MODAL */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-300 grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                <div>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">{isHindi ? 'मूल मद आवंटन:' : 'Main Head:'}</p>
+                  <p className="font-bold text-slate-900">
                   {accountHeads.find((h) => h.id === viewingWorkVouchersModal.headId)?.name || 'N/A'}
                 </p>
                 <p className="font-mono text-slate-800 font-extrabold">₹{(viewingWorkVouchersModal.headAmount || 0).toLocaleString('en-IN')}</p>
@@ -4133,6 +4288,7 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
                   })()}
                 </tbody>
               </table>
+            </div>
             </div>
 
             {/* MODAL FOOTER */}

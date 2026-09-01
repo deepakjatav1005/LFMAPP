@@ -2,7 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { BuildingPermissionRecord, Family, OfficeDetails } from '../types';
 import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
-import { formatDateDDMMYYYY, triggerPrint, getCleanOfficeTitle } from '../utils/printUtils';
+import {
+  formatDateDDMMYYYY,
+  triggerPrint,
+  openPrintWindow,
+  openInStandaloneTab,
+  downloadElementAsPDF,
+  getCleanOfficeTitle
+} from '../utils/printUtils';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 import {
   DuplicateWarningModal,
@@ -1124,20 +1131,58 @@ export const BuildingPermissionView: React.FC<BuildingPermissionViewProps> = ({
             </div>
 
             {/* Modal Sticky Footer Actions */}
-            <div className="flex items-center justify-between gap-3 print:hidden pt-3 border-t border-slate-200 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 print:hidden pt-3 border-t border-slate-200 shrink-0">
               <button
+                type="button"
                 onClick={() => setSelectedPermForPrint(null)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
                 {isHindi ? 'वापस जाएं (Close)' : 'Close'}
               </button>
-              <button
-                onClick={() => triggerPrint('printable-building-permission')}
-                className="px-6 py-2.5 bg-primary hover:bg-primary-700 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <span>🖨️</span>
-                <span>{isHindi ? 'प्रमाण पत्र प्रिंट / डाउनलोड करें' : 'Print Certificate PDF'}</span>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (selectedPermForPrint) {
+                      await downloadElementAsPDF(
+                        'printable-building-permission',
+                        `BuildingPermission_${selectedPermForPrint.permissionNo}`,
+                        'portrait'
+                      );
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>📥</span>
+                  <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedPermForPrint) {
+                      openInStandaloneTab(
+                        'printable-building-permission',
+                        `BuildingPermission_${selectedPermForPrint.permissionNo}`,
+                        'portrait'
+                      );
+                    }
+                  }}
+                  className="px-3.5 py-2.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span>
+                  <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerPrint('printable-building-permission', { orientation: 'portrait', title: `BuildingPermission_${selectedPermForPrint.permissionNo}` })}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <span>🖨️</span>
+                  <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

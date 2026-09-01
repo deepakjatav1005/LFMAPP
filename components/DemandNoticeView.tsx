@@ -2,7 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { Family, Tax, OfficeDetails, Admin, TaxType } from '../types';
 import ViewHeader from './ViewHeader';
 import OfficialVoucherHeader from './OfficialVoucherHeader';
-import { getCleanOfficeTitle, triggerPrint, formatDateDDMMYYYY, getOfficeLogoUrl } from '../utils/printUtils';
+import {
+  getCleanOfficeTitle,
+  triggerPrint,
+  formatDateDDMMYYYY,
+  getOfficeLogoUrl,
+  downloadElementAsPDF,
+  openInStandaloneTab
+} from '../utils/printUtils';
 
 interface DemandNoticeViewProps {
   families: Family[];
@@ -131,17 +138,51 @@ export const DemandNoticeView: React.FC<DemandNoticeViewProps> = ({
             </button>
 
             <button
+              type="button"
+              onClick={async () => {
+                const title = batchNoticeMode
+                  ? `DemandNotices_Batch_${formatDateDDMMYYYY(issueDateInput)}`
+                  : `DemandNotice_${currentFamily ? currentFamily.name : 'All'}`;
+                await downloadElementAsPDF('demand-notice-printable-area', title, 'portrait');
+              }}
+              className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>📥</span>
+              <span>{isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const title = batchNoticeMode
+                  ? `DemandNotices_Batch_${formatDateDDMMYYYY(issueDateInput)}`
+                  : `DemandNotice_${currentFamily ? currentFamily.name : 'All'}`;
+                openInStandaloneTab('demand-notice-printable-area', title, 'portrait');
+              }}
+              className="px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+              title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+            >
+              <span>↗️</span>
+              <span>{isHindi ? 'नये टैब में' : 'New Tab'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 try {
-                  triggerPrint('printable-area');
+                  triggerPrint('demand-notice-printable-area', {
+                    title: batchNoticeMode
+                      ? `DemandNotices_Batch_${formatDateDDMMYYYY(issueDateInput)}`
+                      : `DemandNotice_${currentFamily ? currentFamily.name : 'All'}`
+                  });
                 } catch (e) {
                   console.error('Print demand notice failed:', e);
                 }
               }}
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-black text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>🖨️</span>
-              <span>{isHindi ? 'मांग नोटिस प्रिंट / PDF डाउनलोड करें' : 'Print / Download Notice PDF'}</span>
+              <span>{isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Notice'}</span>
             </button>
           </div>
         </div>
@@ -239,7 +280,7 @@ export const DemandNoticeView: React.FC<DemandNoticeViewProps> = ({
       </div>
 
       {/* NOTICE PRINT CONTAINER */}
-      <div className="space-y-12">
+      <div id="demand-notice-printable-area" className="space-y-12">
         {batchNoticeMode ? (
           // BATCH MODE: Print demand notices for all families with pending dues
           familiesWithDues.length > 0 ? (
@@ -327,7 +368,7 @@ const DemandNoticeDocument: React.FC<DemandNoticeDocumentProps> = ({
   isHindi,
 }) => {
   return (
-    <div id="printable-area" className="printable-area bg-white p-6 sm:p-8 rounded-2xl shadow-xl border-2 border-dashed border-amber-300 max-w-3xl mx-auto space-y-5 text-slate-900 font-sans print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none page-break-inside-avoid page-break-after-always">
+    <div className="demand-notice-card printable-area bg-white p-6 sm:p-8 rounded-2xl shadow-xl border-2 border-dashed border-amber-400 max-w-3xl mx-auto space-y-5 text-slate-900 font-sans print:shadow-none print:border-2 print:border-slate-800 print:rounded-xl print:p-6 print:m-0 print:max-w-none page-break-inside-avoid page-break-after-always">
       {/* 1. STANDARDIZED OFFICIAL VOUCHER HEADER (MATCHING RECEIPT PAGE) */}
       <OfficialVoucherHeader
         officeDetails={officeDetails}

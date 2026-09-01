@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { formatDateDDMMYYYY, getOfficeLogoUrl, getCleanOfficeTitle, getCleanOfficeSubtitle, DEFAULT_OFFICE_LOGO } from './printUtils';
+import { formatDateDDMMYYYY, getOfficeLogoUrl, getCleanOfficeTitle, getCleanOfficeSubtitle, DEFAULT_OFFICE_LOGO, openPrintWindow } from './printUtils';
 
 /**
  * Export data table to an Excel (.xlsx) file
@@ -65,13 +65,6 @@ export const exportToPDF = (
   const logoUrl = getOfficeLogoUrl(officeDetails);
   const secretaryName =
     officeDetails?.secretaryName || admin?.name || 'सचिव / प्राधिकृत अधिकारी';
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    // Fallback to jsPDF if pop-up blocked
-    generateFallbackJSPDF(filename, title, subtitle, headers, rows, officeTitle);
-    return;
-  }
 
   const dateStr = formatDateDDMMYYYY(new Date());
   const isWideTable = headers.length >= 7;
@@ -236,9 +229,7 @@ export const exportToPDF = (
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  openPrintWindow(htmlContent, `${title} - ${filename}`, isWideTable ? 'landscape' : 'portrait');
 };
 
 /**
@@ -339,15 +330,6 @@ export const exportBulkVouchersToPDF = (
   officeDetailsParam?: any,
   adminParam?: any
 ) => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    // If popup blocked, use client-side download fallback
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    doc.text('Vouchers export initiated. Please allow pop-ups for high-resolution Hindi receipt printing.', 14, 30);
-    doc.save(`${filename}.pdf`);
-    return;
-  }
-
   const officeDetails =
     typeof officeDetailsParam === 'object' && officeDetailsParam !== null
       ? officeDetailsParam
@@ -539,9 +521,7 @@ export const exportBulkVouchersToPDF = (
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  openPrintWindow(htmlContent, filename, 'portrait');
 };
 
 /**
@@ -555,12 +535,6 @@ export const exportBulkMemberCardsToPDF = (
   officeDetails?: any,
   admin?: any
 ) => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('कृपया पॉप-अप की अनुमति दें (Please allow pop-ups for Member Card PDF printing).');
-    return;
-  }
-
   const officeTitle = getCleanOfficeTitle(officeDetails, admin?.gramPanchayat);
   const officeSubtitle = getCleanOfficeSubtitle(officeDetails, admin);
   const logoUrl = getOfficeLogoUrl(officeDetails);
@@ -770,9 +744,7 @@ export const exportBulkMemberCardsToPDF = (
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  openPrintWindow(htmlContent, filename, 'portrait');
 };
 
 /**
@@ -796,12 +768,6 @@ export const exportBulkDemandBillsToPDF = (
   officeDetails?: any,
   admin?: any
 ) => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('कृपया पॉप-अप की अनुमति दें (Please allow pop-ups for Demand Bills PDF printing).');
-    return;
-  }
-
   const officeTitle = getCleanOfficeTitle(officeDetails, admin?.gramPanchayat);
   const cleanSubtitle = getCleanOfficeSubtitle(officeDetails, admin);
   const logoUrl = getOfficeLogoUrl(officeDetails);
@@ -1008,7 +974,5 @@ export const exportBulkDemandBillsToPDF = (
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  openPrintWindow(htmlContent, filename, 'portrait');
 };

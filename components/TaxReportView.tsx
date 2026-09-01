@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tax, Payment, Family, Admin, TaxType, OfficeDetails } from '../types';
 import { exportToPDF, exportToExcel, exportBulkVouchersToPDF } from '../utils/exportUtils';
 import ViewHeader from './ViewHeader';
-import { triggerPrint, getCleanOfficeTitle, getCleanOfficeSubtitle, formatDateDDMMYYYY } from '../utils/printUtils';
+import { triggerPrint, openInStandaloneTab, downloadElementAsPDF, getCleanOfficeTitle, getCleanOfficeSubtitle, formatDateDDMMYYYY } from '../utils/printUtils';
 
 interface TaxReportViewProps {
   taxes: Tax[];
@@ -428,7 +428,7 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
   };
 
   return (
-    <div id="printable-area" className="printable-area container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade-in max-w-7xl">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade-in max-w-7xl">
       {/* STANDARDIZED HEADER WITH BACK AND CLOSE BUTTONS */}
       <ViewHeader
         title={isHindi ? "कर रिपोर्ट एवं खाता बही" : "Tax Report & Ledger"}
@@ -539,8 +539,9 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
               </div>
 
               {/* Export Buttons */}
-              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 pt-2 md:pt-0">
+              <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto shrink-0 pt-2 md:pt-0">
                 <button
+                  type="button"
                   onClick={handleExportTaxpayersExcel}
                   className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Export taxpayers list to Excel spreadsheet"
@@ -548,24 +549,36 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
                   <span>📊</span> Excel
                 </button>
                 <button
+                  type="button"
                   onClick={handleExportTaxpayersPDF}
-                  className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Export taxpayers report to PDF file"
                 >
-                  <span>📄</span> PDF
+                  <span>📥</span> {isHindi ? 'PDF डाउनलोड करें' : 'Download PDF'}
                 </button>
                 <button
+                  type="button"
+                  onClick={() => {
+                    openInStandaloneTab('printable-taxpayers-report', 'Taxpayers_List_Report', 'landscape');
+                  }}
+                  className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1 transition-colors cursor-pointer"
+                  title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+                >
+                  <span>↗️</span> {isHindi ? 'नये टैब में' : 'New Tab'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     try {
-                      triggerPrint('printable-area');
+                      triggerPrint('printable-taxpayers-report', { orientation: 'landscape', title: 'Taxpayers_List_Report' });
                     } catch (e) {
                       console.error('Print report failed:', e);
                     }
                   }}
-                  className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Print Taxpayers List"
                 >
-                  <span>🖨️</span> Print
+                  <span>🖨️</span> {isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print'}
                 </button>
               </div>
             </div>
@@ -599,7 +612,7 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
           </div>
 
           {/* TAXPAYERS MASTER TABLE */}
-          <div id="printable-area" className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+          <div id="printable-taxpayers-report" className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
             {/* PRINTABLE OFFICIAL OFFICE PROFILE HEADER */}
             <div className="p-4 border-b-2 border-slate-900 text-center space-y-1">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900">
@@ -896,22 +909,51 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <button
+                type="button"
                 onClick={handleExportLedgerExcel}
                 className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5"
               >
-                <span>📊</span> Excel Ledger
+                <span>📊</span> Excel
               </button>
               <button
+                type="button"
                 onClick={handleExportLedgerPDF}
-                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5"
               >
-                <span>📄</span> PDF Ledger
+                <span>📥</span> {isHindi ? 'PDF डाउनलोड करें' : 'PDF Ledger'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  openInStandaloneTab('tax-ledger-printable-area', activeFamily ? `TaxLedger_${activeFamily.name}_${activeFamily.samagraId}` : 'TaxLedger', 'portrait');
+                }}
+                className="px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1"
+                title="नये विंडो में खोलकर सीधे प्रिंट या PDF सेव करें"
+              >
+                <span>↗️</span> {isHindi ? 'नये टैब में' : 'New Tab'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    triggerPrint('tax-ledger-printable-area', {
+                      orientation: 'portrait',
+                      title: activeFamily ? `TaxLedger_${activeFamily.name}_${activeFamily.samagraId}` : 'TaxLedger'
+                    });
+                  } catch (e) {
+                    console.error('Print ledger failed:', e);
+                  }
+                }}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5"
+              >
+                <span>🖨️</span> {isHindi ? 'प्रिंट करें (Ctrl+P)' : 'Print Ledger'}
               </button>
             </div>
           </div>
 
+          <div id="tax-ledger-printable-area" className="space-y-6">
           {/* BENEFICIARY INFO HEADER */}
           {activeFamily && (
             <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -993,6 +1035,7 @@ export const TaxReportView: React.FC<TaxReportViewProps> = ({
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
         </div>
       )}
