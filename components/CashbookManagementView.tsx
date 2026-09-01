@@ -1040,27 +1040,76 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
     document.body.removeChild(link);
   };
 
+  const getHeaderInfo = () => {
+    switch (activeTab) {
+      case CashbookTab.ACCOUNT_HEADS:
+        return {
+          title: isHindi ? 'खाता शीर्षक निर्माण एवं प्रबंधन (Account Heads)' : 'Account Heads Management',
+          subtitle: isHindi ? 'आय एवं व्यय के मुख्य खाता शीर्षकों का प्रबंधन व प्रारंभिक शेष दर्ज करें' : 'Manage primary income and expenditure account heads & opening balances',
+        };
+      case CashbookTab.EXPENSE_SUBHEADS:
+        return {
+          title: isHindi ? 'व्यय उप-शीर्षक प्रबंधन (Expense Subheads)' : 'Expense Subheads Management',
+          subtitle: isHindi ? 'व्यय खाता शीर्षकों के अंतर्गत विस्तृत उप-शीर्षक जोड़ें एवं प्रबंधित करें' : 'Manage detailed sub-heads under expenditure heads',
+        };
+      case CashbookTab.VENDORS:
+        return {
+          title: isHindi ? 'वेंडर / आपूर्तिकर्ता प्रबंधन (Vendor Management)' : 'Vendor & Supplier Management',
+          subtitle: isHindi ? 'सामग्री एवं सेवा प्रदाता वेंडरों का विवरण एवं बैंक खाता दर्ज करें' : 'Manage suppliers, contractor profiles & vendor bank details',
+        };
+      case CashbookTab.WORKS:
+        return {
+          title: isHindi ? 'निर्माण एवं विकास कार्य प्रबंधन (Work Management)' : 'Work & Project Management',
+          subtitle: isHindi ? 'स्वीकृत कार्यों का विवरण, अनुमानित लागत व प्रगति दर्ज करें' : 'Manage approved civil works, project costs & execution status',
+        };
+      case CashbookTab.INCOME_VOUCHERS:
+        return {
+          title: isHindi ? 'आय वाउचर प्रविष्टि एवं रिकॉर्ड (Income Voucher)' : 'Income Voucher Entry & Records',
+          subtitle: isHindi ? 'ग्राम पंचायत की विभिन्न मदों में प्राप्त आय वाउचर दर्ज करें एवं स्लिप जनरेट करें' : 'Record received income vouchers, grant receipts & generate slips',
+        };
+      case CashbookTab.EXPENDITURE_VOUCHERS:
+        return {
+          title: isHindi ? 'व्यय वाउचर प्रविष्टि एवं रिकॉर्ड (Expenditure Voucher)' : 'Expenditure Voucher Entry & Records',
+          subtitle: isHindi ? 'नया व्यय वाउचर दर्ज करें, वाउचर स्लिप एवं भुगतान नोटशीट जनरेट करें' : 'Record new expenditure voucher, generate voucher slips & payment note sheets',
+        };
+      case CashbookTab.LEDGER_REPORT:
+        return {
+          title: isHindi ? 'खातावार लेजर रिपोर्ट (Account Ledger Report)' : 'Account-wise Ledger Report',
+          subtitle: isHindi ? 'प्रत्येक खाता शीर्षक की विस्तृत आय-व्यय प्रविष्टि एवं शेष देखें' : 'View comprehensive ledger breakdown and balance for each account head',
+        };
+      case CashbookTab.CASHBOOK_REPORT:
+        return {
+          title: isHindi ? 'रोकड़ बही / कैशबुक रजिस्टर (Cashbook Register)' : 'Panchayat Cashbook Register',
+          subtitle: isHindi ? 'दिनांकवार आय, व्यय एवं बैंक शेष का प्रमाणित रोकड़बही प्रारूप' : 'Date-wise official cashbook report with receipts, payments and closing balance',
+        };
+      case CashbookTab.WORK_EXPENDITURE_REPORT:
+        return {
+          title: isHindi ? 'कार्य व्यय व अभिसरण रिपोर्ट (Work Expenditure Report)' : 'Work Expenditure & Convergence Report',
+          subtitle: isHindi ? 'निर्माण कार्यों पर हुए कुल व्यय एवं वाउचरों का विस्तृत विवरण' : 'Detailed work-wise expenditure tracking, voucher history & convergence details',
+        };
+      default:
+        return {
+          title: isHindi ? 'ग्राम पंचायत कैशबुक एवं बहीखाता प्रबंधन' : 'Panchayat Cashbook & Financial Ledger',
+          subtitle: isHindi ? 'खाता शीर्षक, वेंडर, निर्माण कार्य, आय/व्यय वाउचर एवं रोकड़ बही रिपोर्ट' : 'Account Heads, Vendors, Works, Income/Expenditure Vouchers & Cashbook Register',
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
       <ViewHeader
-        title={
-          activeTab === CashbookTab.EXPENDITURE_VOUCHERS
-            ? (isHindi ? 'व्यय वाउचर प्रविष्टि एवं रिकॉर्ड (Expenditure Voucher)' : 'Expenditure Voucher Entry & Records')
-            : (isHindi ? 'ग्राम पंचायत कैशबुक एवं बहीखाता प्रबंधन' : 'Panchayat Cashbook & Financial Ledger')
-        }
-        subtitle={
-          activeTab === CashbookTab.EXPENDITURE_VOUCHERS
-            ? (isHindi ? 'नया व्यय वाउचर दर्ज करें, वाउचर स्लिप एवं भुगतान नोटशीट जनरेट करें' : 'Record new expenditure voucher, generate voucher slips & payment note sheets')
-            : (isHindi ? 'खाता शीर्षक, वेंडर, निर्माण कार्य, आय/व्यय वाउचर एवं रोकड़ बही रिपोर्ट' : 'Account Heads, Vendors, Works, Income/Expenditure Vouchers & Cashbook Register')
-        }
+        title={headerInfo.title}
+        subtitle={headerInfo.subtitle}
         onBack={onBack}
         onClose={onClose}
         isHindi={isHindi}
       />
 
-      {/* TOP METRICS SUMMARY CARDS (Hidden on Expenditure Voucher page) */}
-      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
+      {/* TOP METRICS SUMMARY CARDS (Shown on Cashbook & Ledger Reports only) */}
+      {(activeTab === CashbookTab.CASHBOOK_REPORT || activeTab === CashbookTab.LEDGER_REPORT) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 print:hidden">
           <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
@@ -1121,157 +1170,6 @@ export const CashbookManagementView: React.FC<CashbookManagementViewProps> = ({
               💰
             </div>
           </div>
-        </div>
-      )}
-
-      {/* TAXATION RECEIPTS & CASHBOOK SYNC STATUS BAR (Hidden on Expenditure Voucher page) */}
-      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
-        <div className="p-3.5 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl shadow-md border border-emerald-700/50 flex flex-col md:flex-row items-center justify-between gap-3 print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg shrink-0">
-              ⚡
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 rounded-md text-[10px] font-black uppercase tracking-wider">
-                  {isHindi ? 'स्वतः सिंक सक्रिय' : 'Auto Sync Active'}
-                </span>
-                <p className="text-xs font-black text-white">
-                  {isHindi
-                    ? 'कर संग्रह, अन्य कर, भवन अनुमति एवं बुकिंग रसीदें कैशबुक से 100% सिंक हैं'
-                    : 'Tax collections, building permissions & booking rents are synced with Cashbook'}
-                </p>
-              </div>
-              <p className="text-[11px] text-emerald-200/80 mt-0.5">
-                {isHindi
-                  ? `कुल कर रसीदें: ${payments.length} | अन्य कर: ${otherTaxReceipts.length} | भवन अनुमति: ${buildingPermissions.length} | बुकिंग किराया: ${bookingRents.length}`
-                  : `Tax Receipts: ${payments.length} | Other Tax: ${otherTaxReceipts.length} | Building Perms: ${buildingPermissions.length} | Booking Rents: ${bookingRents.length}`}
-              </p>
-            </div>
-          </div>
-
-          {onSyncTaxTransactions && (
-            <button
-              onClick={onSyncTaxTransactions}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
-            >
-              <span>🔄</span>
-              <span>{isHindi ? 'कर रसीदें सिंक करें' : 'Sync Tax Receipts'}</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* MODULE TAB NAVIGATION BAR (Hidden on Expenditure Voucher page) */}
-      {activeTab !== CashbookTab.EXPENDITURE_VOUCHERS && (
-        <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-1.5 print:hidden">
-          <button
-            onClick={() => setActiveTab(CashbookTab.ACCOUNT_HEADS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.ACCOUNT_HEADS
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            <span>🏦</span>
-            <span>1. {isHindi ? 'खाता शीर्षक निर्माण' : 'Account Heads'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.EXPENSE_SUBHEADS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.EXPENSE_SUBHEADS
-                ? 'bg-rose-700 text-white shadow-md'
-                : 'bg-rose-50 hover:bg-rose-100 text-rose-900'
-            }`}
-          >
-            <span>📁</span>
-            <span>2. {isHindi ? 'व्यय उप-शीर्षक' : 'Expense Subheads'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.VENDORS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.VENDORS
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            <span>🏬</span>
-            <span>3. {isHindi ? 'वेंडर प्रबंधन' : 'Vendor Management'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.WORKS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.WORKS
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            <span>🏗️</span>
-            <span>4. {isHindi ? 'कार्य प्रबंधन' : 'Work Management'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.INCOME_VOUCHERS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.INCOME_VOUCHERS
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
-            }`}
-          >
-            <span>📈</span>
-            <span>5. {isHindi ? 'आय वाउचर' : 'Income Voucher'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.EXPENDITURE_VOUCHERS)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.EXPENDITURE_VOUCHERS
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
-            }`}
-          >
-            <span>📉</span>
-            <span>6. {isHindi ? 'व्यय वाउचर' : 'Expenditure Voucher'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.LEDGER_REPORT)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.LEDGER_REPORT
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800'
-            }`}
-          >
-            <span>📊</span>
-            <span>7. {isHindi ? 'लेजर रिपोर्ट' : 'Ledger Report'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.CASHBOOK_REPORT)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.CASHBOOK_REPORT
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
-            }`}
-          >
-            <span>📗</span>
-            <span>7. {isHindi ? 'कैशबुक/रोकड़ बही रिपोर्ट' : 'Cashbook Report'}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab(CashbookTab.WORK_EXPENDITURE_REPORT)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === CashbookTab.WORK_EXPENDITURE_REPORT
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'bg-teal-50 hover:bg-teal-100 text-teal-900'
-            }`}
-          >
-            <span>🚜</span>
-            <span>8. {isHindi ? 'कार्य व्यय व अभिसरण रिपोर्ट' : 'Work Expenditure Report'}</span>
-          </button>
         </div>
       )}
 
